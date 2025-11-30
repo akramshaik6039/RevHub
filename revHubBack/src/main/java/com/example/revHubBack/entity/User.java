@@ -29,6 +29,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column(columnDefinition = "LONGTEXT")
     private String profilePicture;
     private String bio;
     

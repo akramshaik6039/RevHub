@@ -36,24 +36,7 @@ export class DashboardComponent implements OnInit {
   followingCount = 0;
   userPostsData: any[] = [];
   newPostContent = '';
-  posts: any[] = [
-    {
-      id: 1,
-      author: 'Akram',
-      content: 'This is a sample post content.',
-      timestamp: '2 hours ago',
-      likes: 5,
-      comments: 2,
-      shares: 1,
-      liked: false,
-      media: null,
-      mediaType: '',
-      commentsList: [
-        { id: 1, author: 'Karthik', content: 'Great post!', timestamp: '1 hour ago' },
-        { id: 2, author: 'Akram', content: 'Thanks!', timestamp: '30 min ago' }
-      ]
-    }
-  ];
+  posts: any[] = [];
   
   selectedFile: File | null = null;
   selectedFileType = '';
@@ -109,12 +92,14 @@ export class DashboardComponent implements OnInit {
     this.isLoading = true;
     this.postService.getPosts(0, 10).subscribe({
       next: (response) => {
+        console.log('Posts loaded:', response);
         this.posts = response.content || [];
         this.currentPage = response.number || 0;
         this.hasMorePosts = (response.number || 0) < (response.totalPages || 0) - 1;
         this.isLoading = false;
       },
       error: (error) => {
+        console.error('Error loading posts:', error);
         this.posts = [];
         this.isLoading = false;
       }
@@ -217,14 +202,18 @@ export class DashboardComponent implements OnInit {
   }
   
   updateProfile(updates: any) {
+    console.log('Updating profile with:', updates);
     this.profileService.updateProfile(updates).subscribe({
       next: (updatedUser) => {
+        console.log('Profile updated successfully:', updatedUser);
         this.loadUserProfile(); // Reload profile data
         this.isEditingProfile = false;
         this.selectedProfilePicture = null;
       },
       error: (error) => {
         console.error('Error updating profile:', error);
+        console.error('Error details:', error.error);
+
       }
     });
   }
@@ -635,6 +624,12 @@ export class DashboardComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error loading user profile:', error);
+          if (error.status === 404) {
+            console.log('User not found - redirecting to registration');
+            // User doesn't exist, clear session and redirect
+            this.authService.logout();
+            window.location.href = '/auth';
+          }
         }
       });
       
@@ -645,6 +640,9 @@ export class DashboardComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error loading user posts:', error);
+          if (error.status === 404) {
+            this.userPostsData = [];
+          }
         }
       });
     }
@@ -1025,11 +1023,14 @@ export class DashboardComponent implements OnInit {
         }
       },
       error: (error) => {
-        console.error('Error deleting notification:', error);
-        // Still remove from UI even if backend fails
-        this.notifications = this.notifications.filter(n => n.id !== notification.id);
-        if (!notification.readStatus) {
-          this.unreadNotificationCount = Math.max(0, this.unreadNotificationCount - 1);
+        // If status is 200, treat as success despite error format
+        if (error.status === 200) {
+          this.notifications = this.notifications.filter(n => n.id !== notification.id);
+          if (!notification.readStatus) {
+            this.unreadNotificationCount = Math.max(0, this.unreadNotificationCount - 1);
+          }
+        } else {
+          console.error('Error deleting notification:', error);
         }
       }
     });
@@ -1094,7 +1095,7 @@ export class DashboardComponent implements OnInit {
         contacts.forEach(contact => {
           this.chatService.getUnreadCount(contact).subscribe({
             next: (count) => {
-              console.log(`Unread count for ${contact}: ${count}`);
+
               this.unreadCounts[contact] = count;
             },
             error: (error) => {

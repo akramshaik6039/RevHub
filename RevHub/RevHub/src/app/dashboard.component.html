@@ -284,6 +284,7 @@
             <img [src]="userProfile?.profilePicture || 'default.jpg'" class="rounded-circle mb-3" alt="Profile" style="width: 100px; height: 100px; object-fit: cover;">
             <h3>{{profileName}}</h3>
             <p class="text-muted">&#64;{{profileUsername}}</p>
+            <p class="text-muted" *ngIf="userProfile?.bio">{{userProfile?.bio}}</p>
             
 
             <div class="row mb-3">
@@ -311,7 +312,7 @@
               <button class="btn btn-outline-primary" (click)="editProfile()">Edit Profile</button>
               <button class="btn" [class.btn-warning]="userProfile?.isPrivate" [class.btn-outline-success]="!userProfile?.isPrivate" (click)="togglePrivacy()">
                 <i class="fas" [class.fa-lock]="userProfile?.isPrivate" [class.fa-globe]="!userProfile?.isPrivate"></i>
-                {{userProfile?.isPrivate ? 'Private' : 'Public'}}
+                {{(userProfile?.isPrivate) ? 'Private' : 'Public'}}
               </button>
               <button class="btn btn-outline-secondary" (click)="toggleTheme()">
                 {{isDarkTheme ? 'Light' : 'Dark'}}
@@ -503,9 +504,9 @@
 
         <div *ngIf="!selectedChat">
           <h3 class="mb-4">Chats</h3>
-          <div *ngIf="Object.keys(unreadCounts).length > 0" class="mb-2">
+          <!-- <div *ngIf="Object.keys(unreadCounts).length > 0" class="mb-2">
             <small class="text-muted">Debug: {{unreadCounts | json}}</small>
-          </div>
+          </div> -->
           
           <!-- Search Bar -->
           <div class="mb-3">
@@ -546,7 +547,7 @@
                     *ngFor="let contact of contacts" 
                     (click)="selectChat(contact)">
               <div class="d-flex align-items-center">
-                <img src="default.jpg" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
+                <img [src]="'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
                 <div>
                   <h6 class="mb-0">{{contact}}</h6>
                   <small class="text-muted">Click to chat</small>
@@ -699,11 +700,11 @@
       </div>
       <div class="card-body p-0">
         <div *ngFor="let user of suggestedUsers" class="d-flex align-items-center p-2 border-bottom">
-          <img src="default.jpg" class="rounded-circle me-2" alt="Avatar" style="width: 35px; height: 35px; object-fit: cover;">
+          <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-2" alt="Avatar" style="width: 35px; height: 35px; object-fit: cover;">
           <div class="flex-grow-1">
-            <h6 class="mb-0 small">{{user.name}}</h6>
+            <h6 class="mb-0 small">{{user.username}}</h6>
             <small class="text-muted">&#64;{{user.username}}</small>
-            <small class="text-muted d-block">{{user.followers}} followers</small>
+            <small class="text-muted d-block" *ngIf="user.bio">{{user.bio}}</small>
           </div>
           <button class="btn btn-sm" 
                   [class.btn-primary]="user.followStatus === 'NOT_FOLLOWING'"

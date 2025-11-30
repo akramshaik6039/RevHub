@@ -64,22 +64,28 @@ public class ProfileController {
     }
 
     @PutMapping
-    public ResponseEntity<User> updateProfile(@RequestBody Map<String, String> updates, Authentication authentication) {
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> updates, Authentication authentication) {
+        try {
+            User user = userRepository.findByUsername(authentication.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (updates.containsKey("bio")) {
-            user.setBio(updates.get("bio"));
-        }
-        if (updates.containsKey("profilePicture")) {
-            user.setProfilePicture(updates.get("profilePicture"));
-        }
-        if (updates.containsKey("isPrivate")) {
-            user.setIsPrivate(Boolean.parseBoolean(updates.get("isPrivate")));
-        }
+            if (updates.containsKey("bio")) {
+                user.setBio(updates.get("bio"));
+            }
+            if (updates.containsKey("profilePicture")) {
+                user.setProfilePicture(updates.get("profilePicture"));
+            }
+            if (updates.containsKey("isPrivate")) {
+                user.setIsPrivate(Boolean.parseBoolean(updates.get("isPrivate")));
+            }
 
-        User updatedUser = userRepository.save(user);
-        return ResponseEntity.ok(updatedUser);
+            User updatedUser = userRepository.save(user);
+            return ResponseEntity.ok(updatedUser);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
     }
     
     @GetMapping("/all")
