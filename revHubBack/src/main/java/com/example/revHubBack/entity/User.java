@@ -39,6 +39,8 @@ public class User {
     private Boolean isVerified = false;
     
     private String verificationToken;
+    
+
 
     @CreationTimestamp
     private LocalDateTime createdDate;

@@ -5,6 +5,7 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
+import com.example.revHubBack.entity.User;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -49,5 +50,14 @@ public class JwtUtils {
         } catch (MalformedJwtException | ExpiredJwtException | UnsupportedJwtException | IllegalArgumentException e) {
             return false;
         }
+    }
+    
+    public String generateJwtTokenForUser(User user) {
+        return Jwts.builder()
+                .subject(user.getUsername())
+                .issuedAt(new Date())
+                .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
+                .signWith(getSigningKey())
+                .compact();
     }
 }

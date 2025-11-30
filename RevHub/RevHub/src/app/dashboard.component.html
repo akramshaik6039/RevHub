@@ -23,6 +23,22 @@
           </div>
         </div>
         
+        <!-- Feed Filter Buttons -->
+        <div class="d-flex justify-content-center mb-4" *ngIf="!searchQuery.trim()">
+          <button class="btn me-3" 
+                  [class.btn-primary]="activeFeedType === 'universal'"
+                  [class.btn-outline-primary]="activeFeedType !== 'universal'"
+                  (click)="switchFeed('universal')">
+            🌍 Universal
+          </button>
+          <button class="btn" 
+                  [class.btn-primary]="activeFeedType === 'followers'"
+                  [class.btn-outline-primary]="activeFeedType !== 'followers'"
+                  (click)="switchFeed('followers')">
+            👥 Following
+          </button>
+        </div>
+        
         <!-- Search Results -->
         <div *ngIf="searchQuery.trim() && (searchResults.length > 0 || isSearching)" class="mb-4">
           <div *ngIf="isSearching" class="text-center mb-3">
@@ -628,7 +644,7 @@
                             (click)="acceptFollowRequest(notification); $event.stopPropagation()">
                       Accept
                     </button>
-                    <button class="btn btn-sm btn-outline-secondary" 
+                    <button class="btn btn-sm btn-danger" 
                             (click)="rejectFollowRequest(notification); $event.stopPropagation()">
                       Decline
                     </button>

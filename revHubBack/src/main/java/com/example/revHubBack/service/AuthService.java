@@ -7,6 +7,7 @@ import com.example.revHubBack.entity.User;
 import com.example.revHubBack.repository.UserRepository;
 import com.example.revHubBack.security.JwtUtils;
 import com.example.revHubBack.security.UserPrincipal;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,6 +29,8 @@ public class AuthService {
 
     @Autowired
     JwtUtils jwtUtils;
+    
+
 
     public JwtResponse authenticateUser(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
@@ -40,6 +43,9 @@ public class AuthService {
         return new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), userDetails.getUsername());
     }
 
+    @Autowired
+    private EmailVerificationService emailVerificationService;
+    
     public String registerUser(RegisterRequest signUpRequest) {
         try {
             if (userRepository.existsByUsername(signUpRequest.getUsername())) {
@@ -54,16 +60,18 @@ public class AuthService {
             user.setUsername(signUpRequest.getUsername());
             user.setEmail(signUpRequest.getEmail());
             user.setPassword(encoder.encode(signUpRequest.getPassword()));
-            user.setVerificationToken(java.util.UUID.randomUUID().toString());
+            user.setIsVerified(false);
 
             userRepository.save(user);
             
-            // In a real application, send verification email here
-            System.out.println("Verification token for " + user.getEmail() + ": " + user.getVerificationToken());
+            // Send OTP verification email
+            emailVerificationService.sendVerificationOTP(user.getEmail());
             
-            return "User registered successfully! Please check your email for verification.";
+            return "User registered successfully! Please check your email for verification OTP.";
         } catch (Exception e) {
             throw new RuntimeException("Registration failed: " + e.getMessage());
         }
     }
+    
+
 }

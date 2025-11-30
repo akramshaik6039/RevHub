@@ -6,6 +6,7 @@ import com.example.revHubBack.dto.RegisterRequest;
 import com.example.revHubBack.service.AuthService;
 import com.example.revHubBack.service.PasswordResetService;
 import com.example.revHubBack.service.EmailVerificationService;
+
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -52,6 +53,8 @@ public class AuthController {
     @Autowired
     private EmailVerificationService emailVerificationService;
     
+
+    
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody com.example.revHubBack.dto.PasswordResetRequest request) {
         try {
@@ -91,4 +94,20 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
+    
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOTP(@RequestBody com.example.revHubBack.dto.OTPVerificationRequest request) {
+        try {
+            String result = emailVerificationService.verifyOTP(request.getEmail(), request.getOtp());
+            if (result.equals("Email verified successfully")) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.badRequest().body(result);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+    
+
 }

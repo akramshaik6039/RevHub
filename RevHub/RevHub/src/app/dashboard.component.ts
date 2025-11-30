@@ -20,6 +20,7 @@ import { NotificationService, Notification } from './core/services/notification.
 export class DashboardComponent implements OnInit {
   activeTab = 'feed';
   feedType = 'universal';
+  activeFeedType = 'universal';
   currentPage = 0;
   hasMorePosts = true;
   isLoading = false;
@@ -123,6 +124,30 @@ export class DashboardComponent implements OnInit {
   switchFeedType(type: string) {
     this.feedType = type;
     this.loadFeeds();
+  }
+  
+  switchFeed(feedType: string) {
+    this.activeFeedType = feedType;
+    this.feedType = feedType;
+    this.currentPage = 0;
+    this.posts = [];
+    this.loadFeedsByType(feedType);
+  }
+  
+  loadFeedsByType(feedType: string) {
+    this.isLoading = true;
+    this.postService.getPosts(0, 10, feedType).subscribe({
+      next: (response) => {
+        this.posts = response.content || [];
+        this.currentPage = response.number || 0;
+        this.hasMorePosts = (response.number || 0) < (response.totalPages || 0) - 1;
+        this.isLoading = false;
+      },
+      error: (error) => {
+        this.posts = [];
+        this.isLoading = false;
+      }
+    });
   }
 
   loadMorePosts() {

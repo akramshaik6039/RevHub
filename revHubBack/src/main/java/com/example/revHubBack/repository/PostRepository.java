@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.repository.query.Param;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
@@ -21,12 +22,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findByAuthorAndCreatedDateAfterOrderByCreatedDateDesc(User author, LocalDateTime date);
     List<Post> findByCreatedDateAfterOrderByCreatedDateDesc(LocalDateTime date);
     
-    @Query("SELECT p FROM Post p WHERE p.visibility = 'PUBLIC' OR p.author.id = :userId OR p.author.id IN :followingIds ORDER BY p.createdDate DESC")
-    Page<Post> findVisiblePosts(@Param("userId") Long userId, @Param("followingIds") List<Long> followingIds, Pageable pageable);
-    
     @Query("SELECT p FROM Post p WHERE p.visibility = 'PUBLIC' ORDER BY p.createdDate DESC")
     Page<Post> findPublicPosts(Pageable pageable);
     
-    @Query("SELECT p FROM Post p WHERE (p.author.id IN :followingIds OR p.author.id = :userId) AND (p.visibility = 'PUBLIC' OR p.author.id IN :followingIds OR p.author.id = :userId) ORDER BY p.createdDate DESC")
+    @Query("SELECT p FROM Post p WHERE (p.author.id = :userId OR p.author.id IN :followingIds) ORDER BY p.createdDate DESC")
     Page<Post> findFollowersPosts(@Param("userId") Long userId, @Param("followingIds") List<Long> followingIds, Pageable pageable);
 }

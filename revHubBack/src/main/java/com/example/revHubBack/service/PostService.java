@@ -56,6 +56,9 @@ public class PostService {
             .map(User::getId)
             .collect(java.util.stream.Collectors.toList());
         
+        // Add current user's ID to see their own posts in followers feed
+        followingIds.add(currentUser.getId());
+        
         return postRepository.findFollowersPosts(currentUser.getId(), followingIds, pageable);
     }
 
@@ -127,22 +130,26 @@ public class PostService {
         
         List<Post> userPosts = postRepository.findByAuthorOrderByCreatedDateDesc(user);
         
-        if (currentUsername == null || !currentUsername.equals(username)) {
-            User currentUser = currentUsername != null ? userRepository.findByUsername(currentUsername).orElse(null) : null;
-            
-            boolean isFollowing = false;
-            if (currentUser != null) {
-                List<User> following = followRepository.findFollowing(currentUser);
-                isFollowing = following.stream().anyMatch(u -> u.getId().equals(user.getId()));
-            }
-            
-            return userPosts.stream()
-                .filter(post -> post.getVisibility() == com.example.revHubBack.entity.PostVisibility.PUBLIC || 
-                               (currentUser != null && isFollowing))
-                .collect(java.util.stream.Collectors.toList());
+        // If viewing own posts, return all posts regardless of visibility
+        if (currentUsername != null && currentUsername.equals(username)) {
+            return userPosts;
         }
         
-        return userPosts;
+        // For other users, filter based on visibility and following status
+        User currentUser = currentUsername != null ? userRepository.findByUsername(currentUsername).orElse(null) : null;
+        
+        final boolean isFollowing;
+        if (currentUser != null) {
+            List<User> following = followRepository.findFollowing(currentUser);
+            isFollowing = following.stream().anyMatch(u -> u.getId().equals(user.getId()));
+        } else {
+            isFollowing = false;
+        }
+        
+        return userPosts.stream()
+            .filter(post -> post.getVisibility() == com.example.revHubBack.entity.PostVisibility.PUBLIC || 
+                           (currentUser != null && isFollowing))
+            .collect(java.util.stream.Collectors.toList());
     }
     
     public Post savePost(Post post) {

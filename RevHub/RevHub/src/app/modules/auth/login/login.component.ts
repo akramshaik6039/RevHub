@@ -33,6 +33,8 @@ export class LoginComponent implements OnInit {
     this.typeText();
   }
   
+
+  
   typeText() {
     let i = 0;
     const interval = setInterval(() => {

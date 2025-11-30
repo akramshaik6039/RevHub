@@ -35,6 +35,8 @@ export class RegisterComponent implements OnInit {
     this.typeText();
   }
   
+
+  
   typeText() {
     let i = 0;
     const interval = setInterval(() => {
@@ -58,9 +60,9 @@ export class RegisterComponent implements OnInit {
       this.authService.register(this.registerData).subscribe({
         next: (response) => {
           this.isLoading = false;
-          this.successMessage = 'Registration successful! Please login.';
+          this.successMessage = 'Registration successful! Please check your email for OTP.';
           setTimeout(() => {
-            this.router.navigate(['/auth/login']);
+            this.router.navigate(['/auth/verify-otp'], { queryParams: { email: this.registerData.email } });
           }, 2000);
         },
         error: (error) => {

@@ -1,23 +1,21 @@
 <div class="row">
   <div class="col-md-8 mx-auto">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h2 class="mb-0">Feed</h2>
-      <div style="display: flex;">
-        <button 
-          style="padding: 8px 16px; margin-right: 8px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px;"
-          [style.background]="activeFeedType === 'universal' ? '#007bff' : 'white'"
-          [style.color]="activeFeedType === 'universal' ? 'white' : '#333'"
-          (click)="switchFeed('universal')">
-          Universal
-        </button>
-        <button 
-          style="padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px;"
-          [style.background]="activeFeedType === 'followers' ? '#007bff' : 'white'"
-          [style.color]="activeFeedType === 'followers' ? 'white' : '#333'"
-          (click)="switchFeed('followers')">
-          Following
-        </button>
-      </div>
+    <h2 class="mb-4">Feed</h2>
+    
+    <!-- Feed Filter Buttons -->
+    <div class="d-flex justify-content-center mb-4">
+      <button class="btn btn-primary me-3" 
+              [class.btn-primary]="activeFeedType === 'universal'"
+              [class.btn-outline-primary]="activeFeedType !== 'universal'"
+              (click)="switchFeed('universal')">
+        🌍 Universal Feed
+      </button>
+      <button class="btn btn-primary" 
+              [class.btn-primary]="activeFeedType === 'followers'"
+              [class.btn-outline-primary]="activeFeedType !== 'followers'"
+              (click)="switchFeed('followers')">
+        👥 Following Feed
+      </button>
     </div>
     
     <div *ngIf="isLoading" class="text-center">
