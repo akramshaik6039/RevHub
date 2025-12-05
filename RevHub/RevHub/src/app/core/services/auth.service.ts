@@ -94,6 +94,14 @@ export class AuthService {
   searchUsers(query: string): Observable<any[]> {
     return this.http.get<any[]>(`http://localhost:8080/search/users?q=${query || ''}`);
   }
+
+  getFollowers(): Observable<any[]> {
+    return this.http.get<any[]>('http://localhost:8080/api/users/followers');
+  }
+
+  searchFollowers(query: string): Observable<any[]> {
+    return this.http.get<any[]>(`http://localhost:8080/api/users/followers/search?q=${query || ''}`);
+  }
   
   verifyOTP(email: string, otp: string): Observable<string> {
     return this.http.post(`${this.apiUrl}/verify-otp`, { email, otp }, { responseType: 'text' });

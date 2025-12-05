@@ -3,6 +3,7 @@ package com.example.revHubBack.service;
 import com.example.revHubBack.dto.CommentRequest;
 import com.example.revHubBack.entity.Comment;
 import com.example.revHubBack.entity.Post;
+import com.example.revHubBack.entity.PostVisibility;
 import com.example.revHubBack.entity.User;
 import com.example.revHubBack.repository.CommentRepository;
 import com.example.revHubBack.repository.PostRepository;
@@ -23,11 +24,57 @@ public class CommentService {
 
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private FollowService followService;
 
     public List<Comment> getCommentsByPost(Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found"));
-        return commentRepository.findByPostOrderByCreatedDateDesc(post);
+        
+        // Return only top-level comments (replies are loaded via @OneToMany)
+        return commentRepository.findByPostAndParentCommentIsNullOrderByCreatedDateDesc(post);
+    }
+    
+    public List<Comment> getCommentsByPost(Long postId, String currentUsername) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+        
+        User currentUser = null;
+        if (currentUsername != null) {
+            currentUser = userRepository.findByUsername(currentUsername).orElse(null);
+        }
+        
+        // Check if user can view this post
+        if (!canViewPost(post, currentUser)) {
+            throw new RuntimeException("Not authorized to view comments on this post");
+        }
+        
+        return commentRepository.findByPostAndParentCommentIsNullOrderByCreatedDateDesc(post);
+    }
+    
+    private boolean canViewPost(Post post, User currentUser) {
+        // Public posts can be viewed by anyone
+        if (post.getVisibility() == PostVisibility.PUBLIC) {
+            return true;
+        }
+        
+        // If no current user, can't view private posts
+        if (currentUser == null) {
+            return false;
+        }
+        
+        // Post author can always view their own posts
+        if (post.getAuthor().getId().equals(currentUser.getId())) {
+            return true;
+        }
+        
+        // For followers-only posts, check if current user follows the author
+        if (post.getVisibility() == PostVisibility.FOLLOWERS_ONLY) {
+            return followService.isFollowing(currentUser.getUsername(), post.getAuthor().getUsername());
+        }
+        
+        return false;
     }
 
     @Transactional
@@ -37,6 +84,11 @@ public class CommentService {
         
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found"));
+        
+        // Check if user can comment on this post
+        if (!canViewPost(post, user)) {
+            throw new RuntimeException("Not authorized to comment on this post");
+        }
 
         Comment comment = new Comment();
         comment.setContent(commentRequest.getContent());
@@ -49,6 +101,35 @@ public class CommentService {
         postRepository.save(post);
 
         return savedComment;
+    }
+    
+    @Transactional
+    public Comment addReply(Long commentId, CommentRequest replyRequest, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        Comment parentComment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new RuntimeException("Comment not found"));
+        
+        Post post = parentComment.getPost();
+        
+        // Check if user can comment on this post
+        if (!canViewPost(post, user)) {
+            throw new RuntimeException("Not authorized to reply to this comment");
+        }
+
+        Comment reply = new Comment();
+        reply.setContent(replyRequest.getContent());
+        reply.setAuthor(user);
+        reply.setPost(post);
+        reply.setParentComment(parentComment);
+
+        Comment savedReply = commentRepository.save(reply);
+        
+        // Don't increment post comment count for replies
+        // Only top-level comments count towards the total
+        
+        return savedReply;
     }
 
     @Transactional

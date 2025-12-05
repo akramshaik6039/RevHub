@@ -14,6 +14,11 @@ export interface ChatMessage {
   messageType: string;
 }
 
+export interface UnreadCountResponse {
+  username: string;
+  unreadCount: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -43,5 +48,9 @@ export class ChatService {
 
   getUnreadCount(username: string): Observable<number> {
     return this.http.get<number>(`${this.apiUrl}/unread-count/${username}`);
+  }
+
+  getAllUnreadCounts(): Observable<UnreadCountResponse[]> {
+    return this.http.get<UnreadCountResponse[]>(`${this.apiUrl}/unread-counts`);
   }
 }

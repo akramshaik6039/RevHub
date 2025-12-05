@@ -10,16 +10,11 @@ import { AuthService } from '../../../core/services/auth.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './create.component.html',
-  styleUrl: './create.component.css',
-  styles: [`
-    .cursor-pointer { cursor: pointer; }
-    .hover-bg-light:hover { background-color: #f8f9fa !important; }
-  `]
+  styleUrl: './create.component.css'
 })
 export class CreateComponent {
   postData: PostRequest = {
     content: '',
-    imageUrl: '',
     visibility: 'PUBLIC'
   };
   
@@ -43,81 +38,10 @@ export class CreateComponent {
     private authService: AuthService
   ) {}
 
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.selectedFile = file;
-      
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.previewUrl = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  removeFile() {
-    this.selectedFile = null;
-    this.previewUrl = null;
-  }
-
-  isVideo(file: File): boolean {
-    return file.type.startsWith('video/');
-  }
-
-  isImage(file: File): boolean {
-    return file.type.startsWith('image/');
-  }
-
-  onSubmit() {
-    if (this.postData.content.trim()) {
-      this.isLoading = true;
-      this.errorMessage = '';
-      
-      if (this.selectedFile) {
-        // Use multipart upload for files
-        const formData = new FormData();
-        formData.append('content', this.postData.content);
-        formData.append('file', this.selectedFile);
-        formData.append('visibility', this.postData.visibility || 'PUBLIC');
-        
-        this.postService.createPostWithFile(formData).subscribe({
-          next: (response) => {
-            this.isLoading = false;
-            this.router.navigate(['/dashboard']);
-          },
-          error: (error) => {
-            this.isLoading = false;
-            this.errorMessage = 'Failed to create post. Please try again.';
-          }
-        });
-      } else {
-        // Use JSON for text-only posts
-        this.postData.visibility = this.postData.visibility || 'PUBLIC';
-        this.postService.createPost(this.postData).subscribe({
-          next: (response) => {
-            this.isLoading = false;
-            this.router.navigate(['/dashboard']);
-          },
-          error: (error) => {
-            this.isLoading = false;
-            this.errorMessage = 'Failed to create post. Please try again.';
-          }
-        });
-      }
-    }
-  }
-
-  onContentChange(event: any) {
-    const content = event.target.value;
-    this.extractHashtagsAndMentions(content);
-  }
-  
   onKeyUp(event: KeyboardEvent) {
     const textarea = event.target as HTMLTextAreaElement;
-    const cursorPos = textarea.selectionStart;
     const content = textarea.value;
+    const cursorPos = textarea.selectionStart;
     
     // Handle arrow keys for suggestion navigation
     if (this.showUserSuggestions) {
@@ -142,14 +66,11 @@ export class CreateComponent {
       }
     }
     
-    // Check for @ mention
     const beforeCursor = content.substring(0, cursorPos);
     const atIndex = beforeCursor.lastIndexOf('@');
     
     if (atIndex !== -1) {
       const afterAt = beforeCursor.substring(atIndex + 1);
-      
-      // Check if we're still in the mention (no spaces)
       if (!afterAt.includes(' ') && afterAt.length >= 0) {
         this.currentMentionStart = atIndex;
         this.searchUsers(afterAt);
@@ -162,14 +83,29 @@ export class CreateComponent {
   }
   
   searchUsers(query: string) {
-    this.authService.searchUsers(query).subscribe({
-      next: (users: any[]) => {
-        this.userSuggestions = users || [];
-        this.showUserSuggestions = this.userSuggestions.length > 0;
-        this.selectedSuggestionIndex = 0;
-      },
-      error: () => this.hideUserSuggestions()
-    });
+    if (query === '') {
+      this.authService.getFollowers().subscribe({
+        next: (followers: any[]) => {
+          this.userSuggestions = followers || [];
+          this.showUserSuggestions = this.userSuggestions.length > 0;
+          this.selectedSuggestionIndex = 0;
+        },
+        error: (error) => {
+          this.hideUserSuggestions();
+        }
+      });
+    } else {
+      this.authService.searchFollowers(query).subscribe({
+        next: (followers: any[]) => {
+          this.userSuggestions = followers || [];
+          this.showUserSuggestions = this.userSuggestions.length > 0;
+          this.selectedSuggestionIndex = 0;
+        },
+        error: (error) => {
+          this.hideUserSuggestions();
+        }
+      });
+    }
   }
   
   selectUser(user: any) {
@@ -177,18 +113,16 @@ export class CreateComponent {
     const content = textarea.value;
     const cursorPos = textarea.selectionStart;
     
-    // Find the @ symbol position
     const beforeCursor = content.substring(0, cursorPos);
     const atIndex = beforeCursor.lastIndexOf('@');
     
     if (atIndex !== -1) {
-      // Replace from @ to cursor with @username
-      const newContent = content.substring(0, atIndex) + '@' + user.username + ' ' + content.substring(cursorPos);
+      const sanitizedUsername = this.sanitizeInput(user.username);
+      const newContent = content.substring(0, atIndex) + '@' + sanitizedUsername + ' ' + content.substring(cursorPos);
       this.postData.content = newContent;
       
-      // Set cursor position after the inserted username
       setTimeout(() => {
-        const newPos = atIndex + user.username.length + 2;
+        const newPos = atIndex + sanitizedUsername.length + 2;
         textarea.setSelectionRange(newPos, newPos);
         textarea.focus();
       });
@@ -204,9 +138,13 @@ export class CreateComponent {
     this.selectedSuggestionIndex = -1;
     this.currentMentionStart = -1;
   }
-  
+
+  onContentChange(event: any) {
+    const content = event.target.value;
+    this.extractHashtagsAndMentions(content);
+  }
+
   extractHashtagsAndMentions(content: string) {
-    // Extract hashtags
     const hashtagRegex = /#(\w+)/g;
     this.hashtags = [];
     let match;
@@ -216,7 +154,6 @@ export class CreateComponent {
       }
     }
     
-    // Extract mentions
     const mentionRegex = /@(\w+)/g;
     this.mentions = [];
     while ((match = mentionRegex.exec(content)) !== null) {
@@ -226,7 +163,78 @@ export class CreateComponent {
     }
   }
 
+  onSubmit() {
+    if (this.postData.content.trim()) {
+      this.isLoading = true;
+      this.errorMessage = '';
+      
+      try {
+        if (this.selectedFile) {
+          const formData = new FormData();
+          formData.append('content', this.postData.content);
+          formData.append('file', this.selectedFile);
+          formData.append('visibility', this.postData.visibility || 'PUBLIC');
+          
+          this.postService.createPostWithFile(formData).subscribe({
+            next: (response) => {
+              this.isLoading = false;
+              this.router.navigate(['/dashboard']);
+            },
+            error: (error) => {
+              this.isLoading = false;
+              this.errorMessage = error?.message || 'Failed to create post. Please try again.';
+            }
+          });
+        } else {
+          this.postData.visibility = this.postData.visibility || 'PUBLIC';
+          this.postService.createPost(this.postData).subscribe({
+            next: (response) => {
+              this.isLoading = false;
+              this.router.navigate(['/dashboard']);
+            },
+            error: (error) => {
+              this.isLoading = false;
+              this.errorMessage = error?.message || 'Failed to create post. Please try again.';
+            }
+          });
+        }
+      } catch (error) {
+        this.isLoading = false;
+        this.errorMessage = 'An unexpected error occurred. Please try again.';
+      }
+    }
+  }
+
   onCancel() {
     this.router.navigate(['/dashboard']);
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.previewUrl = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  removeFile() {
+    this.selectedFile = null;
+    this.previewUrl = null;
+  }
+
+  isVideo(file: File): boolean {
+    return file.type.startsWith('video/');
+  }
+
+  isImage(file: File): boolean {
+    return file.type.startsWith('image/');
+  }
+
+  private sanitizeInput(input: string): string {
+    return input.replace(/[\r\n\t]/g, '').trim();
   }
 }

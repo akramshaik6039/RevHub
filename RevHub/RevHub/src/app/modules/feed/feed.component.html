@@ -24,35 +24,7 @@
       </div>
     </div>
     
-    <div class="card mb-3" *ngFor="let post of posts">
-      <div class="card-body">
-        <div class="d-flex align-items-center mb-3">
-          <img [src]="post.author.profilePicture || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
-          <div>
-            <h6 class="mb-0">{{post.author.username}}</h6>
-            <small class="text-muted">{{post.createdDate | date:'MMM d, y'}}</small>
-          </div>
-        </div>
-        <p class="card-text">{{post.content}}</p>
-        <img *ngIf="post.imageUrl" [src]="post.imageUrl" class="img-fluid mb-3" alt="Post image">
-        
-        <div class="d-flex justify-content-between text-muted small mb-2">
-          <span>{{post.likesCount}} likes • {{post.commentsCount}} comments • {{post.sharesCount}} shares</span>
-        </div>
-        
-        <div class="d-flex gap-3">
-          <button class="btn btn-sm btn-outline-primary" (click)="likePost(post)">
-            <i class="fas fa-heart"></i> Like
-          </button>
-          <button class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-comment"></i> Comment
-          </button>
-          <button class="btn btn-sm btn-outline-info" (click)="sharePost(post)">
-            <i class="fas fa-share"></i> Share
-          </button>
-        </div>
-      </div>
-    </div>
+    <app-post-card *ngFor="let post of posts" [post]="post"></app-post-card>
     
     <div *ngIf="posts.length === 0 && !isLoading" class="text-center text-muted">
       <p>No posts available. Create your first post!</p>

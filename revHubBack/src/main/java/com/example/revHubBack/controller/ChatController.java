@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -67,6 +68,32 @@ public class ChatController {
             return ResponseEntity.ok(count);
         } catch (RuntimeException e) {
             return ResponseEntity.ok(0L);
+        }
+    }
+    
+    @GetMapping("/unread-counts")
+    public ResponseEntity<List<Map<String, Object>>> getAllUnreadCounts(Authentication authentication) {
+        try {
+            List<Map<String, Object>> unreadCounts = chatService.getAllUnreadCounts(authentication.getName());
+            return ResponseEntity.ok(unreadCounts);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @GetMapping("/debug/unread/{username}")
+    public ResponseEntity<Map<String, Object>> debugUnreadCount(@PathVariable String username, Authentication authentication) {
+        try {
+            long count = chatService.getUnreadMessageCount(authentication.getName(), username);
+            Map<String, Object> debug = new HashMap<>();
+            debug.put("receiver", authentication.getName());
+            debug.put("sender", username);
+            debug.put("unreadCount", count);
+            return ResponseEntity.ok(debug);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.ok(error);
         }
     }
 }

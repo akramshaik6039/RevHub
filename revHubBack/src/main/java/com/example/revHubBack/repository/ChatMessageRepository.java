@@ -13,6 +13,7 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
     @Query("{ $or: [ { $and: [ { 'senderId': ?0 }, { 'receiverId': ?1 } ] }, { $and: [ { 'senderId': ?1 }, { 'receiverId': ?0 } ] } ] }")
     List<ChatMessage> findConversation(String userId1, String userId2);
     
+    @Query("{ 'receiverId': ?0, 'isRead': false }")
     List<ChatMessage> findByReceiverIdAndIsReadFalse(String receiverId);
     
     @Query("{ $or: [ { 'senderId': ?0 }, { 'receiverId': ?0 } ] }")
@@ -21,6 +22,6 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
     @Query("{ $or: [ { 'senderId': ?0 }, { 'receiverId': ?0 } ] }")
     List<ChatMessage> findChatContactsRaw(String userId);
     
-    @Query(value = "{ 'receiverId': ?0, 'senderId': ?1, 'read': false }", count = true)
+    @Query(value = "{ 'receiverId': ?0, 'senderId': ?1, 'isRead': false }", count = true)
     long countUnreadMessages(String receiverId, String senderId);
 }

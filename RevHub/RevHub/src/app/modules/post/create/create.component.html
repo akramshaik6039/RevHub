@@ -19,17 +19,29 @@
               
               <!-- User suggestions dropdown -->
               <div *ngIf="showUserSuggestions && userSuggestions.length > 0" 
-                   class="position-absolute bg-white border rounded shadow-sm" 
-                   style="top: 100%; left: 0; right: 0; z-index: 1000; max-height: 200px; overflow-y: auto;">
+                   style="position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; max-height: 200px; overflow-y: auto; background: white; border: 2px solid red; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
                 <div *ngFor="let user of userSuggestions; let i = index" 
-                     class="p-2 border-bottom cursor-pointer hover-bg-light"
-                     [class.bg-light]="selectedSuggestionIndex === i"
-                     (click)="selectUser(user)">
-                  <strong>@{{user.username}}</strong>
+                     style="padding: 10px; border-bottom: 1px solid #ccc; cursor: pointer; background: white;"
+                     [style.background-color]="selectedSuggestionIndex === i ? '#007bff' : 'white'"
+                     [style.color]="selectedSuggestionIndex === i ? 'white' : 'black'"
+                     (click)="selectUser(user)"
+                     (mouseenter)="selectedSuggestionIndex = i">
+                  <strong>@{{user.username}}</strong><br>
+                  <small>{{user.email}}</small>
                 </div>
               </div>
             </div>
             <small class="text-muted">Tip: Use #hashtags to categorize and @username to mention users. Start typing @ to see suggestions.</small>
+            
+            <!-- Debug info -->
+            <div class="mt-2 text-info small">
+              Debug: showUserSuggestions = {{showUserSuggestions}}, suggestions count = {{userSuggestions.length}}
+            </div>
+            
+            <!-- Test button -->
+            <button type="button" class="btn btn-sm btn-info mt-2" (click)="testSuggestions()">
+              Test Suggestions
+            </button>
             
             <!-- Show detected hashtags and mentions -->
             <div *ngIf="hashtags.length > 0" class="mt-2">

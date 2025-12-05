@@ -10,6 +10,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class ChatService {
@@ -37,6 +40,7 @@ public class ChatService {
         message.setReceiverUsername(receiver.getUsername());
         message.setContent(content);
         message.setTimestamp(LocalDateTime.now());
+        message.setRead(false); // Ensure new messages are unread
         
         ChatMessage savedMessage = chatMessageRepository.save(message);
         
@@ -98,5 +102,22 @@ public class ChatService {
                 .orElseThrow(() -> new RuntimeException("Sender not found"));
         
         return chatMessageRepository.countUnreadMessages(receiver.getId().toString(), sender.getId().toString());
+    }
+    
+    public List<Map<String, Object>> getAllUnreadCounts(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<String> contacts = getChatContacts(username);
+        
+        return contacts.stream()
+                .map(contact -> {
+                    long unreadCount = getUnreadMessageCount(username, contact);
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("username", contact);
+                    result.put("unreadCount", unreadCount);
+                    return result;
+                })
+                .collect(Collectors.toList());
     }
 }

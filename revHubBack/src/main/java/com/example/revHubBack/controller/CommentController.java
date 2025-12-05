@@ -18,9 +18,10 @@ public class CommentController {
     private CommentService commentService;
 
     @GetMapping("/{id}/comments")
-    public ResponseEntity<List<Comment>> getComments(@PathVariable Long id) {
+    public ResponseEntity<List<Comment>> getComments(@PathVariable Long id, Authentication authentication) {
         try {
-            List<Comment> comments = commentService.getCommentsByPost(id);
+            String currentUsername = authentication != null ? authentication.getName() : null;
+            List<Comment> comments = commentService.getCommentsByPost(id, currentUsername);
             return ResponseEntity.ok(comments);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
@@ -34,6 +35,18 @@ public class CommentController {
         try {
             Comment comment = commentService.addComment(id, commentRequest, authentication.getName());
             return ResponseEntity.ok(comment);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/comments/{commentId}/replies")
+    public ResponseEntity<Comment> addReply(@PathVariable Long commentId,
+                                          @Valid @RequestBody CommentRequest replyRequest,
+                                          Authentication authentication) {
+        try {
+            Comment reply = commentService.addReply(commentId, replyRequest, authentication.getName());
+            return ResponseEntity.ok(reply);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
         }

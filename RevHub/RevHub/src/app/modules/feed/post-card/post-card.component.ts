@@ -1,7 +1,7 @@
 import { Component, Input, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Post } from '../../../core/services/post.service';
+import { Post, PostService } from '../../../core/services/post.service';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -27,7 +27,10 @@ export class PostCardComponent {
   commentSuggestions: any[] = [];
   selectedCommentSuggestionIndex = -1;
   
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private postService: PostService
+  ) {}
   
   isVideo(mediaType?: string): boolean {
     return mediaType === 'video' || mediaType?.startsWith('video/');
@@ -51,6 +54,24 @@ export class PostCardComponent {
   
   toggleComments() {
     this.showComments = !this.showComments;
+    if (this.showComments && this.comments.length === 0) {
+      this.loadComments();
+    }
+  }
+  
+  loadComments() {
+    console.log('Loading comments for post:', this.post.id);
+    this.postService.getComments(this.post.id).subscribe({
+      next: (comments) => {
+        console.log('Comments loaded:', comments);
+        this.comments = comments.map(comment => this.initializeComment(comment));
+      },
+      error: (error) => {
+        console.error('Error loading comments for post', this.post.id, ':', error);
+        // Show user-friendly error message
+        this.comments = [];
+      }
+    });
   }
   
   onCommentKeyUp(event: KeyboardEvent) {
@@ -141,23 +162,25 @@ export class PostCardComponent {
   
   addComment() {
     if (this.newComment.trim()) {
-      const comment = {
-        id: Date.now(),
-        content: this.newComment,
-        author: { username: 'current_user', profilePicture: null },
-        createdDate: new Date(),
-        showReplyForm: false,
-        replyText: '',
-        replies: []
-      };
-      this.comments.unshift(comment);
-      this.newComment = '';
-      this.post.commentsCount++;
+      console.log('Adding comment to post:', this.post.id, 'Content:', this.newComment);
+      this.postService.addComment(this.post.id, this.newComment).subscribe({
+        next: (comment) => {
+          console.log('Comment added successfully:', comment);
+          const initializedComment = this.initializeComment(comment);
+          this.comments.unshift(initializedComment);
+          this.newComment = '';
+          this.post.commentsCount++;
+        },
+        error: (error) => {
+          console.error('Error adding comment to post', this.post.id, ':', error);
+          // You could add a user notification here
+        }
+      });
     }
   }
   
   initializeComment(comment: any) {
-    return {
+    const initialized = {
       ...comment,
       replies: comment.replies || [],
       showReplyForm: false,
@@ -166,16 +189,17 @@ export class PostCardComponent {
       replySuggestions: [],
       selectedReplySuggestionIndex: -1
     };
+    console.log('Initialized comment:', initialized);
+    return initialized;
   }
   
   toggleReply(commentIndex: number) {
     const comment = this.comments[commentIndex];
-    if (!comment.showReplyForm) {
-      comment.showReplyForm = false;
+    comment.showReplyForm = !comment.showReplyForm;
+    if (comment.showReplyForm) {
       comment.replyText = '';
       comment.replies = comment.replies || [];
     }
-    comment.showReplyForm = !comment.showReplyForm;
   }
   
   cancelReply(commentIndex: number) {
@@ -188,20 +212,22 @@ export class PostCardComponent {
   addReply(commentIndex: number) {
     const comment = this.comments[commentIndex];
     if (comment.replyText?.trim()) {
-      const reply = {
-        id: Date.now(),
-        content: comment.replyText,
-        author: { username: 'current_user', profilePicture: null },
-        createdDate: new Date()
-      };
-      
-      if (!comment.replies) {
-        comment.replies = [];
-      }
-      comment.replies.push(reply);
-      comment.replyText = '';
-      comment.showReplyForm = false;
-      this.hideReplySuggestions(commentIndex);
+      console.log('Adding reply to comment:', comment.id, 'Content:', comment.replyText);
+      this.postService.addReply(comment.id, comment.replyText).subscribe({
+        next: (reply) => {
+          console.log('Reply added successfully:', reply);
+          if (!comment.replies) {
+            comment.replies = [];
+          }
+          comment.replies.push(reply);
+          comment.replyText = '';
+          comment.showReplyForm = false;
+          this.hideReplySuggestions(commentIndex);
+        },
+        error: (error) => {
+          console.error('Error adding reply to comment', comment.id, ':', error);
+        }
+      });
     }
   }
   
@@ -290,5 +316,26 @@ export class PostCardComponent {
     comment.showReplySuggestions = false;
     comment.replySuggestions = [];
     comment.selectedReplySuggestionIndex = -1;
+  }
+  
+  canDeleteComment(comment: any): boolean {
+    // User can delete their own comments or comments on their own posts
+    // For now, we'll need to get current user info - this is a simplified check
+    return true; // You should implement proper authorization logic here
+  }
+  
+  deleteComment(commentIndex: number) {
+    const comment = this.comments[commentIndex];
+    if (confirm('Are you sure you want to delete this comment?')) {
+      this.postService.deleteComment(this.post.id, comment.id).subscribe({
+        next: () => {
+          this.comments.splice(commentIndex, 1);
+          this.post.commentsCount--;
+        },
+        error: (error) => {
+          console.error('Error deleting comment:', error);
+        }
+      });
+    }
   }
 }

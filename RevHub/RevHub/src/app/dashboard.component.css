@@ -54,7 +54,59 @@
   border-radius: 12px 12px 0 0;
 }
 
+/* Chat tab badge animation */
+.chat-tab-badge {
+  animation: shake 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(2px); }
+}
+
 .bottom-nav .btn-link i {
   font-size: 18px;
   margin-bottom: 2px;
+}
+
+/* Chat unseen message indicators */
+.chat-unread-indicator {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+  }
+}
+
+.chat-contact-unread {
+  border-left: 4px solid #dc3545 !important;
+  background: linear-gradient(90deg, rgba(220, 53, 69, 0.05) 0%, rgba(255, 255, 255, 1) 100%) !important;
+}
+
+.chat-contact-unread:hover {
+  background: linear-gradient(90deg, rgba(220, 53, 69, 0.1) 0%, rgba(248, 249, 250, 1) 100%) !important;
+}
+
+.unread-badge {
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(-1px);
+  }
 }

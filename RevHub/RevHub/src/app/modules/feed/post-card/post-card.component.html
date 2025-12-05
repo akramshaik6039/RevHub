@@ -100,20 +100,48 @@
             <p class="mb-0" [innerHTML]="formatContent(comment.content)"></p>
           </div>
           
-          <!-- Reply Button -->
-          <div class="mb-2">
-            <button class="btn btn-outline-primary btn-sm" (click)="toggleReply(i)">
-              Reply
+          <!-- Action Buttons -->
+          <div class="mb-2 d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" 
+                    (click)="toggleReply(i)"
+                    style="display: block !important;">
+              <i class="fas fa-reply"></i> Reply ({{i}})
             </button>
+            <button *ngIf="canDeleteComment(comment)" 
+                    class="btn btn-outline-danger btn-sm" 
+                    (click)="deleteComment(i)">
+              <i class="fas fa-trash"></i> Delete
+            </button>
+          </div>
+          
+          <!-- Debug Info -->
+          <div class="small text-muted mb-2">
+            Debug: showReplyForm={{comment.showReplyForm}}, commentIndex={{i}}
           </div>
           
           <!-- Reply Form -->
           <div *ngIf="comment.showReplyForm" class="mb-2">
-            <textarea 
-              class="form-control form-control-sm mb-2" 
-              rows="2" 
-              placeholder="Write a reply..."
-              [(ngModel)]="comment.replyText"></textarea>
+            <div class="position-relative">
+              <textarea 
+                class="form-control form-control-sm mb-2" 
+                rows="2" 
+                placeholder="Write a reply... Use @username to mention"
+                [(ngModel)]="comment.replyText"
+                (keyup)="onReplyKeyUp($event, i)"
+                (keydown)="onReplyKeyDown($event, i)"></textarea>
+              
+              <!-- User suggestions dropdown for replies -->
+              <div *ngIf="comment.showReplySuggestions && comment.replySuggestions?.length > 0" 
+                   class="position-absolute bg-white border rounded shadow-sm" 
+                   style="top: 100%; left: 0; right: 0; z-index: 1000; max-height: 150px; overflow-y: auto;">
+                <div *ngFor="let user of comment.replySuggestions; let j = index" 
+                     class="p-2 border-bottom cursor-pointer hover-bg-light"
+                     [class.bg-light]="comment.selectedReplySuggestionIndex === j"
+                     (click)="selectReplyUser(user, i)">
+                  <strong>@{{user.username}}</strong>
+                </div>
+              </div>
+            </div>
             <button class="btn btn-primary btn-sm me-2" 
                     (click)="addReply(i)" 
                     [disabled]="!comment.replyText?.trim()">

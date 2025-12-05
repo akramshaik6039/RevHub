@@ -86,6 +86,9 @@ export class DashboardComponent implements OnInit {
     if (this.currentUser) {
       this.loadNotifications();
     }
+    
+    // Start refreshing unread counts globally
+    this.startGlobalUnreadCountRefresh();
   }
 
   loadFeeds() {
@@ -165,8 +168,11 @@ export class DashboardComponent implements OnInit {
       }
       // Load previous chat contacts
       this.loadChatContacts();
-      // Refresh unread counts
-      setTimeout(() => this.refreshUnreadCounts(), 500);
+      // Set up periodic refresh for unread counts
+      this.startUnreadCountRefresh();
+    } else {
+      // Stop periodic refresh when leaving chat tab
+      this.stopUnreadCountRefresh();
     }
   }
 
@@ -547,9 +553,24 @@ export class DashboardComponent implements OnInit {
   selectChat(contact: string) {
     this.selectedChat = contact;
     this.loadConversation(contact);
-    // Mark messages as read and reset unread count
-    this.chatService.markAsRead(contact).subscribe();
+    
+    // Immediately reset UI count for better UX
     this.unreadCounts[contact] = 0;
+    
+    // Mark messages as read in backend
+    this.chatService.markAsRead(contact).subscribe({
+      next: () => {
+        console.log(`Successfully marked messages as read for ${contact}`);
+      },
+      error: (error) => {
+        console.error(`Error marking messages as read for ${contact}:`, error);
+        console.error('Error details:', error.error);
+        // Refresh counts to get actual state from backend
+        setTimeout(() => {
+          this.refreshUnreadCounts();
+        }, 1000);
+      }
+    });
   }
   
   loadConversation(username: string) {
@@ -558,8 +579,9 @@ export class DashboardComponent implements OnInit {
         this.messages[username] = messages.map(msg => ({
           sender: msg.senderUsername,
           content: msg.content,
-          timestamp: new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+          timestamp: this.formatDateTime(msg.timestamp)
         }));
+        setTimeout(() => this.scrollToBottom(), 100);
       },
       error: (error) => {
         console.error('Error loading conversation:', error);
@@ -578,9 +600,18 @@ export class DashboardComponent implements OnInit {
           this.messages[this.selectedChat!].push({
             sender: message.senderUsername,
             content: message.content,
-            timestamp: new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            timestamp: this.formatDateTime(message.timestamp)
           });
           this.newMessage = '';
+          setTimeout(() => this.scrollToBottom(), 100);
+          
+          // Move contact to top of list
+          this.moveContactToTop(this.selectedChat!);
+          
+          // Refresh unread counts for all contacts
+          setTimeout(() => {
+            this.refreshUnreadCounts();
+          }, 500);
         },
         error: (error) => {
           console.error('Error sending message:', error);
@@ -1051,16 +1082,20 @@ export class DashboardComponent implements OnInit {
   }
   
   refreshUnreadCounts() {
+    // Use individual calls since bulk endpoint might not be working
     this.contacts.forEach(contact => {
       this.chatService.getUnreadCount(contact).subscribe({
         next: (count) => {
           this.unreadCounts[contact] = count;
+          console.log(`Unread count for ${contact}: ${count}`);
         },
-        error: (error) => {
+        error: (err) => {
+          console.error(`Error getting unread count for ${contact}:`, err);
           this.unreadCounts[contact] = 0;
         }
       });
     });
+    console.log('Current unread counts after refresh:', this.unreadCounts);
   }
   
   onChatSearchInput() {
@@ -1080,34 +1115,107 @@ export class DashboardComponent implements OnInit {
     this.chatSearchQuery = '';
     this.chatSearchResults = [];
     this.loadConversation(user.username);
-    // Add to contacts if not already there
-    if (!this.contacts.includes(user.username)) {
-      this.contacts.unshift(user.username);
-    }
+    // Move contact to top
+    this.moveContactToTop(user.username);
   }
   
   loadChatContacts() {
     this.chatService.getChatContacts().subscribe({
       next: (contacts) => {
         console.log('Chat contacts loaded:', contacts);
-        this.contacts = contacts;
-        // Load unread counts for each contact
-        contacts.forEach(contact => {
-          this.chatService.getUnreadCount(contact).subscribe({
-            next: (count) => {
-
-              this.unreadCounts[contact] = count;
-            },
-            error: (error) => {
-              console.error(`Error loading unread count for ${contact}:`, error);
-              this.unreadCounts[contact] = 0;
-            }
-          });
-        });
+        // Filter out current user from contacts
+        this.contacts = contacts.filter(contact => contact !== this.currentUser?.username);
+        this.refreshUnreadCounts();
       },
       error: (error) => {
         console.error('Error loading chat contacts:', error);
       }
     });
+  }
+
+  formatDateTime(timestamp: string): string {
+    const date = new Date(timestamp);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    
+    return `${month}/${day}/${year} ${displayHours}:${minutes} ${ampm}`;
+  }
+
+  scrollToBottom() {
+    const messagesContainer = document.querySelector('.chat-messages-container');
+    if (messagesContainer) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  }
+
+  private unreadCountInterval: any;
+
+  startUnreadCountRefresh() {
+    this.stopUnreadCountRefresh();
+    this.unreadCountInterval = setInterval(() => {
+      if (this.activeTab === 'chat') {
+        this.refreshUnreadCounts();
+      }
+    }, 3000); // Refresh every 3 seconds for better real-time experience
+  }
+
+  stopUnreadCountRefresh() {
+    if (this.unreadCountInterval) {
+      clearInterval(this.unreadCountInterval);
+      this.unreadCountInterval = null;
+    }
+  }
+
+  private globalUnreadInterval: any;
+
+  startGlobalUnreadCountRefresh() {
+    // Load contacts and refresh counts immediately
+    this.chatService.getChatContacts().subscribe({
+      next: (contacts) => {
+        this.contacts = contacts.filter(contact => contact !== this.currentUser?.username);
+        this.refreshUnreadCounts();
+      },
+      error: (error) => console.error('Error loading contacts:', error)
+    });
+
+    // Set up global refresh every 5 seconds
+    this.globalUnreadInterval = setInterval(() => {
+      if (this.contacts.length > 0) {
+        this.refreshUnreadCounts();
+      }
+    }, 5000);
+  }
+
+  getTotalUnreadCount(): number {
+    return Object.values(this.unreadCounts).reduce((total, count) => total + count, 0);
+  }
+  
+  simulateUnreadMessages() {
+    // Simulate unread messages for testing
+    this.unreadCounts = {
+      'akram': 3,
+      'BadBoy': 2,
+      'Akshitha': 1
+    };
+    console.log('Simulated unread messages:', this.unreadCounts);
+  }
+  
+  moveContactToTop(username: string) {
+    // Remove from current position
+    this.contacts = this.contacts.filter(contact => contact !== username);
+    // Add to top
+    this.contacts.unshift(username);
+  }
+  
+  clearAllUnreadCounts() {
+    this.contacts.forEach(contact => {
+      this.unreadCounts[contact] = 0;
+    });
+    console.log('Manually cleared all unread counts');
   }
 }

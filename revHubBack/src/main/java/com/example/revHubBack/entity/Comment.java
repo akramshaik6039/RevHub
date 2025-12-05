@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "comments")
@@ -30,6 +31,14 @@ public class Comment {
     @JoinColumn(name = "post_id", nullable = false)
     @JsonIgnore
     private Post post;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_comment_id")
+    @JsonIgnore
+    private Comment parentComment;
+    
+    @OneToMany(mappedBy = "parentComment", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<Comment> replies;
 
     @CreationTimestamp
     private LocalDateTime createdDate;

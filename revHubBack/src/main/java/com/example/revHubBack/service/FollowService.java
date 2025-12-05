@@ -175,4 +175,16 @@ public class FollowService {
             throw new RuntimeException("This user is not following you");
         }
     }
+    
+    public boolean isFollowing(String followerUsername, String followingUsername) {
+        User follower = userRepository.findByUsername(followerUsername).orElse(null);
+        User following = userRepository.findByUsername(followingUsername).orElse(null);
+        
+        if (follower == null || following == null) {
+            return false;
+        }
+        
+        Optional<Follow> follow = followRepository.findByFollowerAndFollowing(follower, following);
+        return follow.isPresent() && follow.get().getStatus() == Follow.FollowStatus.ACCEPTED;
+    }
 }
