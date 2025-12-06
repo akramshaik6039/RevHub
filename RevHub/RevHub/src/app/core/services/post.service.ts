@@ -82,6 +82,14 @@ export class PostService {
     );
   }
 
+  updatePost(id: number, content: string): Observable<Post> {
+    return this.http.put<Post>(`${this.apiUrl}/${id}`, { content });
+  }
+
+  updatePostWithMedia(id: number, formData: FormData): Observable<Post> {
+    return this.http.put<Post>(`${this.apiUrl}/${id}/media`, formData);
+  }
+
   deletePost(id: number): Observable<string> {
     return this.http.delete<string>(`${this.apiUrl}/${id}`);
   }
@@ -115,7 +123,7 @@ export class PostService {
   }
   
   addReply(commentId: number, content: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/comments/${commentId}/replies`, { content });
+    return this.http.post(`http://localhost:8080/posts/comments/${commentId}/replies`, { content });
   }
   
   searchPosts(query: string): Observable<Post[]> {

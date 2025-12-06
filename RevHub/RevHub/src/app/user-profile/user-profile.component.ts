@@ -24,6 +24,8 @@ export class UserProfileComponent implements OnInit {
   canViewPosts = false;
   showComments: { [key: number]: boolean } = {};
   newComment = '';
+  activeTab = 'photos';
+  showFeedView = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -51,7 +53,6 @@ export class UserProfileComponent implements OnInit {
         this.user = profile;
         this.followersCount = profile.followersCount || 0;
         this.followingCount = profile.followingCount || 0;
-        // Load follow status first, then posts
         this.loadFollowStatus(username);
       },
       error: (error) => {
@@ -62,7 +63,6 @@ export class UserProfileComponent implements OnInit {
   }
 
   loadUserPosts(username: string) {
-    // Check if we can view posts (public profile or following private profile)
     this.canViewPosts = !this.user?.isPrivate || this.followStatus === 'ACCEPTED' || this.isOwnProfile();
     
     if (this.canViewPosts) {
@@ -86,17 +86,14 @@ export class UserProfileComponent implements OnInit {
       this.profileService.getFollowStatus(username).subscribe({
         next: (response) => {
           this.followStatus = response.status;
-          // Load posts after follow status is determined
           this.loadUserPosts(username);
         },
         error: (error) => {
           this.followStatus = 'NOT_FOLLOWING';
-          // Load posts even if follow status fails
           this.loadUserPosts(username);
         }
       });
     } else {
-      // For own profile, load posts directly
       this.loadUserPosts(username);
     }
   }
@@ -151,6 +148,49 @@ export class UserProfileComponent implements OnInit {
     return url.startsWith('data:image/') || url.includes('.jpg') || url.includes('.jpeg') || url.includes('.png') || url.includes('.gif') || url.includes('.webp');
   }
 
+  setActiveTab(tab: string) {
+    this.activeTab = tab;
+  }
+
+  getPhotoPosts() {
+    return this.userPosts.filter(post => 
+      post.imageUrl && (post.mediaType === 'image' || (!post.mediaType && this.isImage(post.imageUrl)))
+    );
+  }
+
+  getVideoPosts() {
+    return this.userPosts.filter(post => 
+      post.imageUrl && (post.mediaType === 'video' || (!post.mediaType && this.isVideo(post.imageUrl)))
+    );
+  }
+
+  getTextPosts() {
+    return this.userPosts.filter(post => !post.imageUrl);
+  }
+
+  getFilteredPosts() {
+    switch(this.activeTab) {
+      case 'photos': return this.getPhotoPosts();
+      case 'videos': return this.getVideoPosts();
+      case 'text': return this.getTextPosts();
+      default: return this.userPosts;
+    }
+  }
+
+  openFeedView(clickedPost: any) {
+    this.showFeedView = true;
+    setTimeout(() => {
+      const element = document.getElementById('post-' + clickedPost.id);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  }
+
+  closeFeedView() {
+    this.showFeedView = false;
+  }
+
   likePost(post: any) {
     this.postService.toggleLike(post.id).subscribe({
       next: (response) => {
@@ -190,6 +230,17 @@ export class UserProfileComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error adding comment:', error);
+        }
+      });
+    }
+  }
+
+  messageUser() {
+    if (this.user) {
+      this.router.navigate(['/dashboard'], { 
+        queryParams: { 
+          tab: 'chat', 
+          user: this.user.username 
         }
       });
     }

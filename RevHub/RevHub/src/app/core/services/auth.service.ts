@@ -114,5 +114,7 @@ export class AuthService {
     });
   }
   
-
+  getHashtagSuggestions(query?: string): Observable<string[]> {
+    return this.http.get<string[]>(`http://localhost:8080/search/hashtags?q=${query || ''}`);
+  }
 }

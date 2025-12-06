@@ -1,5 +1,5 @@
 import { Component, OnInit, HostListener } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ThemeService } from './core/services/theme.service';
@@ -53,6 +53,12 @@ export class DashboardComponent implements OnInit {
   postMentionSuggestions: any[] = [];
   showSearchMentionSuggestions = false;
   searchMentionSuggestions: any[] = [];
+  showHashtagSuggestions = false;
+  hashtagSuggestions: string[] = [];
+  showCommentHashtagSuggestions = false;
+  commentHashtagSuggestions: string[] = [];
+  showSearchHashtagSuggestions = false;
+  searchHashtagSuggestions: string[] = [];
   
   selectedChat: string | null = null;
   newMessage = '';
@@ -70,7 +76,9 @@ export class DashboardComponent implements OnInit {
     private profileService: ProfileService,
     private postService: PostService,
     private chatService: ChatService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit() {
@@ -85,6 +93,17 @@ export class DashboardComponent implements OnInit {
       this.profileUsername = this.currentUser.username;
       this.loadUserProfile();
     }
+    
+    // Check for query parameters (e.g., from message button)
+    this.route.queryParams.subscribe(params => {
+      if (params['tab'] === 'chat' && params['user']) {
+        this.setActiveTab('chat');
+        setTimeout(() => {
+          this.selectedChat = params['user'];
+          this.loadConversation(params['user']);
+        }, 500);
+      }
+    });
     
     this.loadFeeds();
     this.loadSuggestedUsers();
@@ -706,6 +725,8 @@ export class DashboardComponent implements OnInit {
   commentToDelete: { post: any, commentId: number } | null = null;
   notifications: Notification[] = [];
   unreadNotificationCount = 0;
+  profileActiveTab = 'photos';
+  selectedPost: any = null;
   
   loadUserProfile() {
     if (this.currentUser?.username) {
@@ -783,23 +804,65 @@ export class DashboardComponent implements OnInit {
 
   editingPost: any = null;
   editPostContent = '';
+  editSelectedFile: File | null = null;
 
   editPost(post: any) {
     this.editingPost = post;
     this.editPostContent = post.content;
   }
 
+  editUserPost(post: any) {
+    this.editingPost = post;
+    this.editPostContent = post.content;
+  }
+
+  onEditFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.editSelectedFile = file;
+    }
+  }
+
   saveEditPost() {
     if (this.editPostContent.trim() && this.editingPost) {
-      this.editingPost.content = this.editPostContent;
-      this.feedService.updatePost(this.editingPost);
-      this.cancelEditPost();
+      if (this.editSelectedFile) {
+        const formData = new FormData();
+        formData.append('content', this.editPostContent);
+        formData.append('file', this.editSelectedFile);
+        
+        this.postService.updatePostWithMedia(this.editingPost.id, formData).subscribe({
+          next: (updatedPost) => {
+            this.editingPost.content = updatedPost.content;
+            this.editingPost.imageUrl = updatedPost.imageUrl;
+            this.editingPost.mediaType = updatedPost.mediaType;
+            this.cancelEditPost();
+            this.loadFeeds();
+            this.loadUserProfile();
+          },
+          error: (error) => {
+            console.error('Error updating post with media:', error);
+          }
+        });
+      } else {
+        this.postService.updatePost(this.editingPost.id, this.editPostContent).subscribe({
+          next: (updatedPost) => {
+            this.editingPost.content = updatedPost.content;
+            this.cancelEditPost();
+            this.loadFeeds();
+            this.loadUserProfile();
+          },
+          error: (error) => {
+            console.error('Error updating post:', error);
+          }
+        });
+      }
     }
   }
 
   cancelEditPost() {
     this.editingPost = null;
     this.editPostContent = '';
+    this.editSelectedFile = null;
   }
 
   get postsCount() {
@@ -1018,6 +1081,16 @@ export class DashboardComponent implements OnInit {
         filteredUsers.forEach(user => {
           user.followStatus = 'NOT_FOLLOWING';
           
+          // Get profile data including followers count
+          this.profileService.getProfile(user.username).subscribe({
+            next: (profile) => {
+              user.followersCount = profile.followersCount;
+            },
+            error: () => {
+              user.followersCount = 0;
+            }
+          });
+          
           if (this.currentUser) {
             this.profileService.getFollowStatus(user.username).subscribe({
               next: (response) => {
@@ -1050,6 +1123,17 @@ export class DashboardComponent implements OnInit {
         });
         
         if (!this.currentUser) {
+          // Get followers count for each user when not authenticated
+          filteredUsers.forEach(user => {
+            this.profileService.getProfile(user.username).subscribe({
+              next: (profile) => {
+                user.followersCount = profile.followersCount;
+              },
+              error: () => {
+                user.followersCount = 0;
+              }
+            });
+          });
           this.suggestedUsers = usersWithStatus.slice(0, 5);
         }
       },
@@ -1315,6 +1399,22 @@ export class DashboardComponent implements OnInit {
     const cursorPos = input.selectionStart || 0;
     const textBeforeCursor = value.substring(0, cursorPos);
     const atIndex = textBeforeCursor.lastIndexOf('@');
+    const hashIndex = textBeforeCursor.lastIndexOf('#');
+    
+    if (hashIndex > atIndex && hashIndex !== -1) {
+      const searchTerm = textBeforeCursor.substring(hashIndex + 1);
+      if (!searchTerm.includes(' ')) {
+        this.authService.getHashtagSuggestions(searchTerm).subscribe({
+          next: (hashtags) => {
+            this.commentHashtagSuggestions = hashtags || [];
+            this.showCommentHashtagSuggestions = this.commentHashtagSuggestions.length > 0;
+          },
+          error: () => this.showCommentHashtagSuggestions = false
+        });
+        this.showCommentMentionSuggestions = false;
+        return;
+      }
+    }
     
     if (atIndex !== -1) {
       const searchTerm = textBeforeCursor.substring(atIndex + 1);
@@ -1329,11 +1429,13 @@ export class DashboardComponent implements OnInit {
             this.commentMentionSuggestions = [];
           }
         });
+        this.showCommentHashtagSuggestions = false;
       } else {
         this.showCommentMentionSuggestions = false;
       }
     } else {
       this.showCommentMentionSuggestions = false;
+      this.showCommentHashtagSuggestions = false;
     }
   }
   
@@ -1346,12 +1448,36 @@ export class DashboardComponent implements OnInit {
     this.commentMentionSuggestions = [];
   }
   
+  selectCommentHashtag(hashtag: string) {
+    const hashIndex = this.newComment.lastIndexOf('#');
+    if (hashIndex !== -1) {
+      this.newComment = this.newComment.substring(0, hashIndex) + '#' + hashtag + ' ';
+    }
+    this.showCommentHashtagSuggestions = false;
+  }
+  
   onPostContentChange(event: any) {
     const textarea = event.target as HTMLTextAreaElement;
     const value = textarea.value;
     const cursorPos = textarea.selectionStart || 0;
     const textBeforeCursor = value.substring(0, cursorPos);
     const atIndex = textBeforeCursor.lastIndexOf('@');
+    const hashIndex = textBeforeCursor.lastIndexOf('#');
+    
+    if (hashIndex > atIndex && hashIndex !== -1) {
+      const searchTerm = textBeforeCursor.substring(hashIndex + 1);
+      if (!searchTerm.includes(' ')) {
+        this.authService.getHashtagSuggestions(searchTerm).subscribe({
+          next: (hashtags) => {
+            this.hashtagSuggestions = hashtags || [];
+            this.showHashtagSuggestions = this.hashtagSuggestions.length > 0;
+          },
+          error: () => this.showHashtagSuggestions = false
+        });
+        this.showPostMentionSuggestions = false;
+        return;
+      }
+    }
     
     if (atIndex !== -1) {
       const searchTerm = textBeforeCursor.substring(atIndex + 1);
@@ -1366,11 +1492,13 @@ export class DashboardComponent implements OnInit {
             this.postMentionSuggestions = [];
           }
         });
+        this.showHashtagSuggestions = false;
       } else {
         this.showPostMentionSuggestions = false;
       }
     } else {
       this.showPostMentionSuggestions = false;
+      this.showHashtagSuggestions = false;
     }
   }
   
@@ -1383,11 +1511,29 @@ export class DashboardComponent implements OnInit {
     this.postMentionSuggestions = [];
   }
   
+  selectHashtag(hashtag: string) {
+    const hashIndex = this.newPostContent.lastIndexOf('#');
+    if (hashIndex !== -1) {
+      this.newPostContent = this.newPostContent.substring(0, hashIndex) + '#' + hashtag + ' ';
+    }
+    this.showHashtagSuggestions = false;
+  }
+  
   onSearchInputChange(event: any) {
     const input = event.target as HTMLInputElement;
     const value = input.value;
     
-    if (value.startsWith('@')) {
+    if (value.startsWith('#')) {
+      const searchTerm = value.substring(1);
+      this.authService.getHashtagSuggestions(searchTerm).subscribe({
+        next: (hashtags) => {
+          this.searchHashtagSuggestions = hashtags || [];
+          this.showSearchHashtagSuggestions = this.searchHashtagSuggestions.length > 0;
+        },
+        error: () => this.showSearchHashtagSuggestions = false
+      });
+      this.showSearchMentionSuggestions = false;
+    } else if (value.startsWith('@')) {
       const searchTerm = value.substring(1);
       this.authService.searchUsers(searchTerm).subscribe({
         next: (users) => {
@@ -1399,8 +1545,10 @@ export class DashboardComponent implements OnInit {
           this.searchMentionSuggestions = [];
         }
       });
+      this.showSearchHashtagSuggestions = false;
     } else {
       this.showSearchMentionSuggestions = false;
+      this.showSearchHashtagSuggestions = false;
       this.onSearchInput();
     }
   }
@@ -1410,5 +1558,54 @@ export class DashboardComponent implements OnInit {
     this.showSearchMentionSuggestions = false;
     this.searchMentionSuggestions = [];
     this.onSearchInput();
+  }
+  
+  selectSearchHashtag(hashtag: string) {
+    this.searchQuery = '#' + hashtag;
+    this.showSearchHashtagSuggestions = false;
+    this.onSearchInput();
+  }
+
+  goToProfile(username: string) {
+    if (username) {
+      this.router.navigate(['/profile', username]);
+    }
+  }
+
+  setProfileActiveTab(tab: string) {
+    this.profileActiveTab = tab;
+  }
+
+  getProfilePhotoPosts() {
+    return this.userPosts.filter(post => 
+      post.imageUrl && (post.mediaType === 'image' || (!post.mediaType && this.isImage(post.imageUrl)))
+    );
+  }
+
+  getProfileVideoPosts() {
+    return this.userPosts.filter(post => 
+      post.imageUrl && (post.mediaType === 'video' || (!post.mediaType && this.isVideo(post.imageUrl)))
+    );
+  }
+
+  getProfileTextPosts() {
+    return this.userPosts.filter(post => !post.imageUrl);
+  }
+
+  getProfileFilteredPosts() {
+    switch(this.profileActiveTab) {
+      case 'photos': return this.getProfilePhotoPosts();
+      case 'videos': return this.getProfileVideoPosts();
+      case 'text': return this.getProfileTextPosts();
+      default: return this.userPosts;
+    }
+  }
+
+  openPostModal(post: any) {
+    this.selectedPost = post;
+  }
+
+  closePostModal() {
+    this.selectedPost = null;
   }
 }

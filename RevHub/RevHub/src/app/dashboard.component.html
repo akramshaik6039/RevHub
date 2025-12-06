@@ -39,6 +39,17 @@
               </div>
             </div>
           </div>
+          
+          <!-- Search Hashtag Suggestions -->
+          <div *ngIf="showSearchHashtagSuggestions" class="position-absolute bg-white border rounded shadow-sm" 
+               style="top: 100%; left: 0; right: 0; z-index: 1000; max-height: 200px; overflow-y: auto;">
+            <div *ngFor="let hashtag of searchHashtagSuggestions" 
+                 class="p-2 border-bottom cursor-pointer hover-bg-light"
+                 (click)="selectSearchHashtag(hashtag)"
+                 style="cursor: pointer;">
+              <strong>#{{ hashtag }}</strong>
+            </div>
+          </div>
         </div>
         
         <!-- Feed Filter Buttons -->
@@ -110,9 +121,13 @@
               <div *ngFor="let post of getPostResults()" class="card mb-2" style="max-width: 600px; margin: 0 auto;">
                 <div class="card-body py-3">
                   <div class="d-flex align-items-center mb-2">
-                    <img [src]="post.author?.profilePicture || 'default.jpg'" class="rounded-circle me-2" alt="Avatar" style="width: 32px; height: 32px; object-fit: cover;">
+                    <img [src]="post.author?.profilePicture || 'default.jpg'" 
+                         class="rounded-circle me-2" 
+                         alt="Avatar" 
+                         style="width: 32px; height: 32px; object-fit: cover; cursor: pointer;" 
+                         (click)="goToProfile(post.author?.username)">
                     <div>
-                      <h6 class="mb-0 small">{{post.author?.username}}</h6>
+                      <h6 class="mb-0 small" style="cursor: pointer;" (click)="goToProfile(post.author?.username)">{{post.author?.username}}</h6>
                       <small class="text-muted" style="font-size: 0.75rem;">{{post.createdDate | date:'MMM d, y'}}</small>
                     </div>
                   </div>
@@ -133,8 +148,68 @@
                          style="max-width: 100%; max-height: 200px; object-fit: cover;" 
                          alt="Post image">
                   </div>
-                  <div class="d-flex justify-content-between text-muted small">
-                    <span>{{post.likesCount}} likes • {{post.commentsCount}} comments</span>
+                  <div class="d-flex justify-content-between text-muted small mb-2">
+                    <span>{{post.likesCount}} likes • {{post.commentsCount}} comments • {{post.sharesCount}} shares</span>
+                  </div>
+                  
+                  <div class="d-flex gap-3">
+                    <button class="btn btn-sm" 
+                            [class.btn-primary]="post.isLiked"
+                            [class.btn-outline-primary]="!post.isLiked"
+                            (click)="likePost(post)">
+                      <i class="fas fa-heart"></i> Like ({{post.likesCount}})
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" (click)="commentPost(post)">
+                      <i class="fas fa-comment"></i> Comment ({{post.commentsCount}})
+                    </button>
+                    <button class="btn btn-sm btn-outline-info" (click)="sharePost(post)">
+                      <i class="fas fa-share"></i> Share ({{post.sharesCount}})
+                    </button>
+                  </div>
+                  
+                  <div *ngIf="showComments[post.id]" class="mt-3 border-top pt-3">
+                    <h6 class="mb-3"><i class="fas fa-comments"></i> Comments</h6>
+                    <div *ngFor="let comment of post.commentsList; let i = index" class="mb-3">
+                      <div class="d-flex">
+                        <img [src]="comment.author?.profilePicture || 'default.jpg'" 
+                             class="rounded-circle me-3" 
+                             style="width: 32px; height: 32px; object-fit: cover;" 
+                             alt="Avatar">
+                        <div class="flex-grow-1">
+                          <div class="rounded p-3 d-flex justify-content-between align-items-start" style="background: #f1f3f4; border: 1px solid #e0e0e0;">
+                            <div class="flex-grow-1">
+                              <strong style="color: #1976d2;">{{comment.author?.username}}</strong>
+                              <p class="mb-0 mt-1" style="color: #333333;">{{comment.content}}</p>
+                            </div>
+                            <button *ngIf="canDeleteComment(comment, post)" 
+                                    class="btn btn-sm btn-outline-danger ms-2" 
+                                    (click)="deleteComment(post, comment.id)"
+                                    style="padding: 2px 6px; font-size: 12px;">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </div>
+                          <div class="mt-1">
+                            <small class="text-muted">{{comment.createdDate | date:'short'}}</small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="mt-2">
+                      <div class="input-group">
+                        <input type="text" 
+                               class="form-control" 
+                               placeholder="Write a comment..." 
+                               [(ngModel)]="newComment" 
+                               name="comment"
+                               (keyup.enter)="addComment(post)">
+                        <button class="btn btn-primary" 
+                                (click)="addComment(post)" 
+                                [disabled]="!newComment.trim()">
+                          Post
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -155,13 +230,40 @@
           <div class="card mb-2" *ngFor="let post of posts" style="max-width: 600px; margin: 0 auto;" [attr.data-post-id]="post.id">
           <div class="card-body py-3">
             <div class="d-flex align-items-center mb-2">
-              <img [src]="post.author?.profilePicture || 'default.jpg'" class="rounded-circle me-2" alt="Avatar" style="width: 32px; height: 32px; object-fit: cover;">
-              <div>
-                <h6 class="mb-0 small">{{post.author?.username}}</h6>
+              <img [src]="post.author?.profilePicture || 'default.jpg'" 
+                   class="rounded-circle me-2" 
+                   alt="Avatar" 
+                   style="width: 32px; height: 32px; object-fit: cover; cursor: pointer;" 
+                   (click)="goToProfile(post.author?.username)">
+              <div class="flex-grow-1">
+                <h6 class="mb-0 small" style="cursor: pointer;" (click)="goToProfile(post.author?.username)">{{post.author?.username}}</h6>
                 <small class="text-muted" style="font-size: 0.75rem;">{{post.createdDate | date:'MMM d, y'}}</small>
               </div>
+              <div *ngIf="post.author?.username === currentUser?.username" class="d-flex gap-1">
+                <button class="btn btn-sm btn-outline-primary" (click)="editPost(post)">
+                  <i class="fas fa-edit"></i>
+                </button>
+              </div>
             </div>
-            <p class="card-text mb-2" style="font-size: 0.9rem;">{{post.content}}</p>
+            <div *ngIf="editingPost?.id !== post.id">
+              <p class="card-text mb-2" style="font-size: 0.9rem;">{{post.content}}</p>
+            </div>
+            <div *ngIf="editingPost?.id === post.id" class="mb-2">
+              <textarea class="form-control" rows="3" [(ngModel)]="editPostContent" name="editContent"></textarea>
+              <div class="mt-2">
+                <input type="file" class="form-control form-control-sm" accept="image/*,video/*" (change)="onEditFileSelected($event)">
+                <small class="text-muted">Change media (optional)</small>
+              </div>
+              <div *ngIf="editSelectedFile" class="mt-2">
+                <div class="alert alert-info p-2">
+                  <small>New file: {{editSelectedFile.name}}</small>
+                </div>
+              </div>
+              <div class="mt-2">
+                <button class="btn btn-sm btn-primary me-2" (click)="saveEditPost()">Save</button>
+                <button class="btn btn-sm btn-secondary" (click)="cancelEditPost()">Cancel</button>
+              </div>
+            </div>
             <div *ngIf="post.imageUrl" class="mb-2">
 
               <video *ngIf="post.mediaType === 'video'" 
@@ -303,6 +405,17 @@
                     No followers found
                   </div>
                 </div>
+                
+                <!-- Comment Hashtag Suggestions -->
+                <div *ngIf="showCommentHashtagSuggestions" class="position-absolute bg-white border rounded shadow-sm" 
+                     style="bottom: 100%; left: 0; right: 0; z-index: 1000; max-height: 200px; overflow-y: auto;">
+                  <div *ngFor="let hashtag of commentHashtagSuggestions" 
+                       class="p-2 border-bottom cursor-pointer hover-bg-light"
+                       (click)="selectCommentHashtag(hashtag)"
+                       style="cursor: pointer;">
+                    <strong>#{{ hashtag }}</strong>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -347,6 +460,17 @@
                         <small class="text-muted d-block" *ngIf="user.bio">{{ user.bio }}</small>
                       </div>
                     </div>
+                  </div>
+                </div>
+                
+                <!-- Hashtag Suggestions -->
+                <div *ngIf="showHashtagSuggestions" class="position-absolute bg-white border rounded shadow-sm" 
+                     style="top: 100%; left: 0; right: 0; z-index: 1000; max-height: 200px; overflow-y: auto; margin-top: 5px;">
+                  <div *ngFor="let hashtag of hashtagSuggestions" 
+                       class="p-2 border-bottom cursor-pointer hover-bg-light"
+                       (click)="selectHashtag(hashtag)"
+                       style="cursor: pointer;">
+                    <strong>#{{ hashtag }}</strong>
                   </div>
                 </div>
               </div>
@@ -516,121 +640,120 @@
 
 
         <div *ngIf="!isEditingProfile && !showFollowersList && !showFollowingList">
-          <h4 class="mb-3">My Posts</h4>
           <div *ngIf="userPosts.length === 0" class="text-center text-muted py-4">
             <p>No posts yet. Create your first post!</p>
           </div>
-          <div class="card mb-3" *ngFor="let post of userPosts">
-            <div class="card-body">
-              <div class="d-flex align-items-center mb-3">
-                <img [src]="userProfile?.profilePicture || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
-                <div class="flex-grow-1">
-                  <h6 class="mb-0">{{post.author?.username}}</h6>
-                  <small class="text-muted">{{post.createdDate | date:'MMM d, y'}}</small>
+          
+          <div *ngIf="userPosts.length > 0">
+            <div class="d-flex justify-content-around mb-3">
+              <button class="btn flex-fill me-2" [class.active]="profileActiveTab === 'photos'" (click)="setProfileActiveTab('photos')" [style.background-color]="profileActiveTab === 'photos' ? '#e91e63' : 'transparent'" [style.color]="profileActiveTab === 'photos' ? 'white' : '#e91e63'" style="border: 2px solid #e91e63; border-radius: 8px;">
+                <i class="fas fa-image"></i> Photos ({{getProfilePhotoPosts().length}})
+              </button>
+              <button class="btn flex-fill me-2" [class.active]="profileActiveTab === 'videos'" (click)="setProfileActiveTab('videos')" [style.background-color]="profileActiveTab === 'videos' ? '#ff5722' : 'transparent'" [style.color]="profileActiveTab === 'videos' ? 'white' : '#ff5722'" style="border: 2px solid #ff5722; border-radius: 8px;">
+                <i class="fas fa-video"></i> Videos ({{getProfileVideoPosts().length}})
+              </button>
+              <button class="btn flex-fill" [class.active]="profileActiveTab === 'text'" (click)="setProfileActiveTab('text')" [style.background-color]="profileActiveTab === 'text' ? '#9c27b0' : 'transparent'" [style.color]="profileActiveTab === 'text' ? 'white' : '#9c27b0'" style="border: 2px solid #9c27b0; border-radius: 8px;">
+                <i class="fas fa-quote-left"></i> Text ({{getProfileTextPosts().length}})
+              </button>
+            </div>
+            
+            <div class="row g-2">
+              <div class="col-4" *ngFor="let post of getProfileFilteredPosts()">
+                <div class="card h-100 position-relative" style="border-radius: 12px; overflow: hidden;" (click)="openPostModal(post)">
+                  <!-- Photo Posts -->
+                  <div *ngIf="post.imageUrl && (post.mediaType === 'image' || (!post.mediaType && isImage(post.imageUrl)))" class="position-relative" style="height: 200px;">
+                    <img [src]="post.imageUrl" class="w-100 h-100" style="object-fit: cover; cursor: pointer;" alt="Post image">
+                    <div class="position-absolute top-0 end-0 p-1">
+                      <i class="fas fa-image text-white"></i>
+                    </div>
+                  </div>
+                  <!-- Video Posts -->
+                  <div *ngIf="post.imageUrl && (post.mediaType === 'video' || (!post.mediaType && isVideo(post.imageUrl)))" class="position-relative" style="height: 200px;">
+                    <video [src]="post.imageUrl" class="w-100 h-100" style="object-fit: cover; cursor: pointer;" muted></video>
+                    <div class="position-absolute top-0 end-0 p-1">
+                      <i class="fas fa-video text-white"></i>
+                    </div>
+                  </div>
+                  <!-- Text Posts -->
+                  <div *ngIf="!post.imageUrl" class="card-body d-flex align-items-center justify-content-center" style="height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); cursor: pointer;">
+                    <div class="text-center text-white">
+                      <i class="fas fa-quote-left mb-2" style="font-size: 24px;"></i>
+                      <p class="mb-0 fw-bold" style="font-size: 14px;">{{post.content.length > 50 ? (post.content | slice:0:50) + '...' : post.content}}</p>
+                    </div>
+                  </div>
+                  <!-- Stats Overlay -->
+                  <div class="position-absolute bottom-0 start-0 end-0 p-2" style="background: linear-gradient(transparent, rgba(0,0,0,0.7));">
+                    <small class="text-white">{{post.likesCount}} <i class="fas fa-heart"></i> • {{post.commentsCount}} <i class="fas fa-comment"></i></small>
+                  </div>
                 </div>
-                <div class="d-flex gap-1">
-                  <button class="btn btn-sm btn-outline-danger" (click)="deleteUserPost(post)">
-                    <i class="fas fa-trash"></i>
-                  </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Post Modal -->
+          <div *ngIf="selectedPost" class="position-fixed top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,0.8); z-index: 1050;" (click)="closePostModal()">
+            <div class="d-flex align-items-center justify-content-center h-100" (click)="$event.stopPropagation()">
+              <div class="card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <div class="d-flex align-items-center">
+                    <img [src]="userProfile?.profilePicture || 'default.jpg'" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;" alt="Avatar">
+                    <div>
+                      <h6 class="mb-0">{{selectedPost.author?.username}}</h6>
+                      <small class="text-muted">{{selectedPost.createdDate | date:'MMM d, y'}}</small>
+                    </div>
+                  </div>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-primary" (click)="editUserPost(selectedPost)">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="deleteUserPost(selectedPost)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" (click)="closePostModal()">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <p class="card-text">{{post.content}}</p>
-              <div *ngIf="post.imageUrl" class="mb-3">
-                <img *ngIf="post.mediaType === 'image' || (!post.mediaType && isImage(post.imageUrl))" [src]="post.imageUrl" class="img-fluid" alt="Post image">
-                <video *ngIf="post.mediaType === 'video' || (!post.mediaType && isVideo(post.imageUrl))" [src]="post.imageUrl" controls autoplay muted loop class="img-fluid" style="max-width: 100%;"></video>
-              </div>
-              
-              <div class="d-flex justify-content-between text-muted small mb-2">
-                <span>{{post.likesCount}} likes • {{post.commentsCount}} comments • {{post.sharesCount}} shares</span>
-              </div>
-              
-              <div class="d-flex gap-3 mb-3">
-                <button class="btn btn-sm" 
-                        [class.btn-primary]="post.isLiked"
-                        [class.btn-outline-primary]="!post.isLiked"
-                        (click)="likePost(post)">
-                  <i class="fas fa-heart"></i> Like ({{post.likesCount}})
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" (click)="commentPost(post)">
-                  <i class="fas fa-comment"></i> Comment ({{post.commentsCount}})
-                </button>
-                <button class="btn btn-sm btn-outline-info" (click)="sharePost(post)">
-                  <i class="fas fa-share"></i> Share ({{post.sharesCount}})
-                </button>
-              </div>
-              
-
-              <div *ngIf="showComments[post.id]" class="mt-3">
-                <div class="border-top pt-3">
-                  <div *ngFor="let comment of post.commentsList; let i = index" class="mb-2">
-                    <div class="d-flex">
-                      <img [src]="comment.author?.profilePicture || 'default.jpg'" 
-                           class="rounded-circle me-2" 
-                           style="width: 30px; height: 30px; object-fit: cover;" 
-                           alt="Avatar">
-                      <div class="flex-grow-1">
-                        <div class="bg-light rounded p-2">
-                          <strong>{{comment.author?.username}}</strong>
-                          <p class="mb-0">{{comment.content}}</p>
-                        </div>
-                        <div class="mt-1">
-                          <small class="text-muted">{{comment.createdDate | date:'short'}}</small>
-                          <button class="btn btn-link btn-sm p-0 ms-2" (click)="toggleCommentReplies(post.id, i)" style="font-size: 11px;">
-                            Reply
-                          </button>
-                          <button *ngIf="comment.replies?.length > 0" class="btn btn-link btn-sm p-0 ms-2" 
-                                  (click)="toggleRepliesVisibility(post.id, i)" style="font-size: 11px;">
-                            {{comment.replies.length}} {{comment.replies.length === 1 ? 'reply' : 'replies'}}
-                          </button>
-                        </div>
-                        
-                        <div *ngIf="comment.showReplyForm" class="mt-2">
-                          <div class="input-group input-group-sm">
-                            <input type="text" class="form-control" placeholder="Reply..." 
-                                   [(ngModel)]="comment.replyText" [name]="'reply-' + comment.id">
-                            <button class="btn btn-primary btn-sm" (click)="addCommentReply(post, i)" 
-                                    [disabled]="!comment.replyText?.trim()">Reply</button>
-                            <button class="btn btn-secondary btn-sm" (click)="cancelCommentReply(post.id, i)">Cancel</button>
-                          </div>
-                        </div>
-                        
-                        <div *ngIf="comment.showReplies && comment.replies?.length > 0" class="mt-2 ms-3">
-                          <div *ngFor="let reply of comment.replies" class="mb-1 p-2 bg-white rounded border">
-                            <div class="d-flex">
-                              <img [src]="reply.author?.profilePicture || 'default.jpg'" 
-                                   class="rounded-circle me-2" 
-                                   style="width: 24px; height: 24px; object-fit: cover;" alt="Avatar">
-                              <div>
-                                <strong class="small">{{reply.author?.username}}</strong>
-                                <p class="mb-0 small">{{reply.content}}</p>
-                                <small class="text-muted" style="font-size: 10px;">{{reply.createdDate | date:'short'}}</small>
-                              </div>
+                <div class="card-body p-0">
+                  <div *ngIf="selectedPost.imageUrl" class="text-center">
+                    <img *ngIf="selectedPost.mediaType === 'image' || (!selectedPost.mediaType && isImage(selectedPost.imageUrl))" 
+                         [src]="selectedPost.imageUrl" class="img-fluid" alt="Post image">
+                    <video *ngIf="selectedPost.mediaType === 'video' || (!selectedPost.mediaType && isVideo(selectedPost.imageUrl))" 
+                           [src]="selectedPost.imageUrl" controls class="img-fluid" style="max-width: 100%;"></video>
+                  </div>
+                  <div class="p-3">
+                    <p class="mb-3">{{selectedPost.content}}</p>
+                    <div class="d-flex gap-3 mb-3">
+                      <button class="btn btn-sm" [class.btn-primary]="selectedPost.isLiked" [class.btn-outline-primary]="!selectedPost.isLiked" (click)="likePost(selectedPost); loadUserProfile()">
+                        <i class="fas fa-heart"></i> {{selectedPost.likesCount}}
+                      </button>
+                      <button class="btn btn-sm btn-outline-secondary" (click)="commentPost(selectedPost)">
+                        <i class="fas fa-comment"></i> {{selectedPost.commentsCount}}
+                      </button>
+                    </div>
+                    <div *ngIf="showComments[selectedPost.id]" class="border-top pt-3">
+                      <div *ngFor="let comment of selectedPost.commentsList" class="mb-2">
+                        <div class="d-flex">
+                          <img [src]="comment.author?.profilePicture || 'default.jpg'" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;" alt="Avatar">
+                          <div class="flex-grow-1">
+                            <div class="bg-light rounded p-2">
+                              <strong class="small">{{comment.author?.username}}</strong>
+                              <p class="mb-0 small">{{comment.content}}</p>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div class="mt-2">
-                    <div class="input-group">
-                      <input type="text" 
-                             class="form-control" 
-                             placeholder="Write a comment..." 
-                             [(ngModel)]="newComment" 
-                             name="comment"
-                             (keyup.enter)="addComment(post)">
-                      <button class="btn btn-primary" 
-                              (click)="addComment(post)" 
-                              [disabled]="!newComment.trim()">
-                        Post
-                      </button>
+                      <div class="input-group mt-2">
+                        <input type="text" class="form-control" placeholder="Add a comment..." [(ngModel)]="newComment" name="comment" (keyup.enter)="addComment(selectedPost)">
+                        <button class="btn btn-primary" (click)="addComment(selectedPost)" [disabled]="!newComment.trim()">Post</button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -843,11 +966,11 @@
       </div>
       <div class="card-body p-0">
         <div *ngFor="let user of suggestedUsers" class="d-flex align-items-center p-2 border-bottom">
-          <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-2" alt="Avatar" style="width: 35px; height: 35px; object-fit: cover;">
+          <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-2" alt="Avatar" style="width: 35px; height: 35px; object-fit: cover; cursor: pointer;" (click)="goToProfile(user.username)">
           <div class="flex-grow-1">
-            <h6 class="mb-0 small">{{user.username}}</h6>
+            <h6 class="mb-0 small" style="cursor: pointer;" (click)="goToProfile(user.username)">{{user.username}}</h6>
             <small class="text-muted">&#64;{{user.username}}</small>
-            <small class="text-muted d-block" *ngIf="user.bio">{{user.bio}}</small>
+            <small class="text-muted d-block">{{user.followersCount || 0}} followers</small>
           </div>
           <button class="btn btn-sm" 
                   [class.btn-primary]="user.followStatus === 'NOT_FOLLOWING'"

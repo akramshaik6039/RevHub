@@ -67,4 +67,15 @@ public class SearchService {
         }
         return userRepository.findByUsernameContainingIgnoreCase(query.trim());
     }
+    
+    @Autowired
+    private com.example.revHubBack.service.HashtagService hashtagService;
+    
+    public List<String> getHashtagSuggestions(String query) {
+        return hashtagService.getHashtagSuggestions(query);
+    }
+    
+    public List<String> getAllHashtags() {
+        return hashtagService.getAllHashtags();
+    }
 }

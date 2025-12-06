@@ -38,4 +38,22 @@ public class SearchController {
             return ResponseEntity.badRequest().body("User search failed: " + e.getMessage());
         }
     }
+    
+    @GetMapping("/hashtags")
+    public ResponseEntity<?> getHashtagSuggestions(@RequestParam(required = false) String q) {
+        try {
+            return ResponseEntity.ok(searchService.getHashtagSuggestions(q));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Hashtag suggestions failed: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/hashtags/all")
+    public ResponseEntity<?> getAllHashtags() {
+        try {
+            return ResponseEntity.ok(searchService.getAllHashtags());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to get all hashtags: " + e.getMessage());
+        }
+    }
 }

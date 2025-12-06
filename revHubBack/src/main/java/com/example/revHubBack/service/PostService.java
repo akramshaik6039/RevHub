@@ -36,6 +36,9 @@ public class PostService {
     
     @Autowired
     private FollowRepository followRepository;
+    
+    @Autowired
+    private HashtagService hashtagService;
 
     public Page<Post> getUniversalPosts(Pageable pageable) {
         return postRepository.findPublicPosts(pageable);
@@ -109,8 +112,61 @@ public class PostService {
         Post savedPost = postRepository.save(post);
         
         processMentions(savedPost, author);
+        processHashtags(savedPost.getContent());
         
         return savedPost;
+    }
+
+    public Post updatePost(Long id, String content, String username) {
+        Post post = postRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        if (!post.getAuthor().getUsername().equals(username)) {
+            throw new RuntimeException("Unauthorized to edit this post");
+        }
+
+        post.setContent(content);
+        Post updatedPost = postRepository.save(post);
+        
+        processHashtags(content);
+        
+        return updatedPost;
+    }
+
+    public Post updatePostWithMedia(Long id, String content, org.springframework.web.multipart.MultipartFile file, String username) {
+        Post post = postRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        if (!post.getAuthor().getUsername().equals(username)) {
+            throw new RuntimeException("Unauthorized to edit this post");
+        }
+
+        post.setContent(content);
+        
+        if (file != null && !file.isEmpty()) {
+            try {
+                byte[] fileBytes = file.getBytes();
+                String base64File = java.util.Base64.getEncoder().encodeToString(fileBytes);
+                String mimeType = file.getContentType();
+                String dataUrl = "data:" + mimeType + ";base64," + base64File;
+                post.setImageUrl(dataUrl);
+                
+                if (mimeType != null) {
+                    if (mimeType.startsWith("image/")) {
+                        post.setMediaType("image");
+                    } else if (mimeType.startsWith("video/")) {
+                        post.setMediaType("video");
+                    }
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Error processing file: " + e.getMessage());
+            }
+        }
+        
+        Post updatedPost = postRepository.save(post);
+        processHashtags(content);
+        
+        return updatedPost;
     }
 
     public void deletePost(Long id, String username) {
@@ -202,6 +258,8 @@ public class PostService {
         post.setCommentsCount(post.getCommentsCount() + 1);
         postRepository.save(post);
         
+        processHashtags(content);
+        
         return savedComment;
     }
 
@@ -269,5 +327,22 @@ public class PostService {
             } catch (Exception e) {
             }
         }
+    }
+    
+    private void processHashtags(String content) {
+        if (content == null) return;
+        
+        System.out.println("Processing hashtags from content: " + content);
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("#(\\w+)");
+        java.util.regex.Matcher matcher = pattern.matcher(content);
+        
+        int count = 0;
+        while (matcher.find()) {
+            String hashtag = matcher.group(1).toLowerCase();
+            System.out.println("Found hashtag: #" + hashtag);
+            hashtagService.saveHashtag(hashtag);
+            count++;
+        }
+        System.out.println("Total hashtags processed: " + count);
     }
 }

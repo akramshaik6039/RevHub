@@ -104,6 +104,31 @@ public class PostController {
         }
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<Post> updatePost(@PathVariable Long id, @RequestBody Map<String, String> request, Authentication authentication) {
+        try {
+            String content = request.get("content");
+            Post updatedPost = postService.updatePost(id, content, authentication.getName());
+            return ResponseEntity.ok(updatedPost);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping(value = "/{id}/media", consumes = {"multipart/form-data"})
+    public ResponseEntity<Post> updatePostWithMedia(
+            @PathVariable Long id,
+            @RequestParam("content") String content,
+            @RequestParam(value = "file", required = false) org.springframework.web.multipart.MultipartFile file,
+            Authentication authentication) {
+        try {
+            Post updatedPost = postService.updatePostWithMedia(id, content, file, authentication.getName());
+            return ResponseEntity.ok(updatedPost);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletePost(@PathVariable Long id, Authentication authentication) {
         try {
