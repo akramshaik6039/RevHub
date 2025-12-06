@@ -15,11 +15,29 @@
         <h3 class="mb-4">Feed</h3>
         
         <!-- Search Bar -->
-        <div class="mb-3">
+        <div class="mb-3 position-relative">
           <div class="input-group input-group-sm">
-            <input type="text" class="form-control form-control-sm" placeholder="Search users, posts, keywords, hashtags..."
-                   [(ngModel)]="searchQuery" name="search" (input)="onSearchInput()">
+            <input type="text" class="form-control form-control-sm" placeholder="Search users, posts, keywords, hashtags... (Use @username)"
+                   [(ngModel)]="searchQuery" name="search" (input)="onSearchInputChange($event)">
             <span class="input-group-text"><i class="fas fa-search"></i></span>
+          </div>
+          
+          <!-- Search Mention Suggestions -->
+          <div *ngIf="showSearchMentionSuggestions" class="position-absolute bg-white border rounded shadow-sm" 
+               style="top: 100%; left: 0; right: 0; z-index: 1000; max-height: 200px; overflow-y: auto;">
+            <div *ngFor="let user of searchMentionSuggestions" 
+                 class="p-2 border-bottom cursor-pointer hover-bg-light"
+                 (click)="selectSearchMention(user)"
+                 style="cursor: pointer;">
+              <div class="d-flex align-items-center">
+                <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-2" 
+                     style="width: 32px; height: 32px; object-fit: cover;" alt="Avatar">
+                <div>
+                  <strong>&#64;{{ user.username }}</strong>
+                  <small class="text-muted d-block" *ngIf="user.bio">{{ user.bio }}</small>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -134,7 +152,7 @@
         </div>
         
         <div *ngIf="!searchQuery.trim()">
-          <div class="card mb-2" *ngFor="let post of posts" style="max-width: 600px; margin: 0 auto;">
+          <div class="card mb-2" *ngFor="let post of posts" style="max-width: 600px; margin: 0 auto;" [attr.data-post-id]="post.id">
           <div class="card-body py-3">
             <div class="d-flex align-items-center mb-2">
               <img [src]="post.author?.profilePicture || 'default.jpg'" class="rounded-circle me-2" alt="Avatar" style="width: 32px; height: 32px; object-fit: cover;">
@@ -184,7 +202,7 @@
 
             <div *ngIf="showComments[post.id]" class="mt-3 border-top pt-3" style="background: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">
               <h6 class="mb-3" style="color: #495057;"><i class="fas fa-comments"></i> Comments</h6>
-              <div *ngFor="let comment of post.commentsList" class="mb-3">
+              <div *ngFor="let comment of post.commentsList; let i = index" class="mb-3">
                 <div class="d-flex">
                   <img [src]="comment.author?.profilePicture || 'default.jpg'" 
                        class="rounded-circle me-3" 
@@ -203,24 +221,87 @@
                         <i class="fas fa-trash"></i>
                       </button>
                     </div>
-                    <small class="text-muted mt-1 d-block">{{comment.createdDate | date:'short'}}</small>
+                    <div class="mt-1">
+                      <small class="text-muted">{{comment.createdDate | date:'short'}}</small>
+                      <button class="btn btn-link btn-sm p-0 ms-2" (click)="toggleCommentReplies(post.id, i)" style="font-size: 12px;">
+                        <i class="fas fa-reply"></i> Reply
+                      </button>
+                      <button *ngIf="comment.replies?.length > 0" class="btn btn-link btn-sm p-0 ms-2" 
+                              (click)="toggleRepliesVisibility(post.id, i)" style="font-size: 12px;">
+                        <i class="fas" [class.fa-chevron-down]="!comment.showReplies" [class.fa-chevron-up]="comment.showReplies"></i>
+                        {{comment.replies.length}} {{comment.replies.length === 1 ? 'reply' : 'replies'}}
+                      </button>
+                    </div>
+                    
+                    <!-- Reply Form -->
+                    <div *ngIf="comment.showReplyForm" class="mt-2">
+                      <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" placeholder="Write a reply..." 
+                               [(ngModel)]="comment.replyText" [name]="'reply-' + comment.id">
+                        <button class="btn btn-primary btn-sm" (click)="addCommentReply(post, i)" 
+                                [disabled]="!comment.replyText?.trim()">
+                          Reply
+                        </button>
+                        <button class="btn btn-secondary btn-sm" (click)="cancelCommentReply(post.id, i)">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <!-- Replies -->
+                    <div *ngIf="comment.showReplies && comment.replies?.length > 0" class="mt-2 ms-3">
+                      <div *ngFor="let reply of comment.replies" class="mb-2 p-2 bg-white rounded border">
+                        <div class="d-flex align-items-start">
+                          <img [src]="reply.author?.profilePicture || 'default.jpg'" 
+                               class="rounded-circle me-2" 
+                               style="width: 24px; height: 24px; object-fit: cover;" 
+                               alt="Avatar">
+                          <div class="flex-grow-1">
+                            <strong class="small" style="color: #1976d2;">{{reply.author?.username}}</strong>
+                            <p class="mb-0 small" style="color: #333333;">{{reply.content}}</p>
+                            <small class="text-muted" style="font-size: 10px;">{{reply.createdDate | date:'short'}}</small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
               
-              <div class="mt-2">
+              <div class="mt-2 position-relative">
                 <div class="input-group">
                   <input type="text" 
                          class="form-control" 
                          placeholder="Write a comment..." 
                          [(ngModel)]="newComment" 
                          name="comment"
+                         (input)="onCommentChange($event)"
+                         (click)="onCommentChange($event)"
+                         (keyup)="onCommentChange($event)"
                          (keyup.enter)="addComment(post)">
                   <button class="btn btn-primary" 
                           (click)="addComment(post)" 
                           [disabled]="!newComment.trim()">
                     Post
                   </button>
+                </div>
+                
+                <!-- Comment Mention Suggestions -->
+                <div *ngIf="showCommentMentionSuggestions" class="mention-suggestions position-absolute" 
+                     style="bottom: 100%; left: 0; right: 0; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto;">
+                  <div *ngFor="let user of commentMentionSuggestions" 
+                       class="mention-item d-flex align-items-center p-2 border-bottom mention-hover" 
+                       (click)="selectCommentMention(user)">
+                    <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-2" 
+                         style="width: 32px; height: 32px; object-fit: cover;" alt="Avatar">
+                    <div>
+                      <div class="fw-bold">{{user.username}}</div>
+                      <small class="text-muted" *ngIf="user.bio">{{user.bio}}</small>
+                    </div>
+                  </div>
+                  <div *ngIf="commentMentionSuggestions.length === 0" class="p-2 text-muted text-center">
+                    No followers found
+                  </div>
                 </div>
               </div>
             </div>
@@ -243,9 +324,31 @@
         <div class="card">
           <div class="card-body">
             <form (ngSubmit)="createPost()">
-              <div class="mb-3">
-                <textarea class="form-control" rows="4" placeholder="What's on your mind? Use #hashtags and &#64;mentions" [(ngModel)]="newPostContent" name="postContent"></textarea>
+              <div class="mb-3 position-relative">
+                <textarea class="form-control" rows="4" placeholder="What's on your mind? Use #hashtags and @mentions" 
+                          [(ngModel)]="newPostContent" name="postContent"
+                          (input)="onPostContentChange($event)"
+                          (click)="onPostContentChange($event)"
+                          (keyup)="onPostContentChange($event)"></textarea>
                 <small class="text-muted">Use #hashtags and &#64;mentions to connect with others</small>
+                
+                <!-- Post Mention Suggestions -->
+                <div *ngIf="showPostMentionSuggestions" class="position-absolute bg-white border rounded shadow-sm" 
+                     style="top: 100%; left: 0; right: 0; z-index: 1000; max-height: 200px; overflow-y: auto; margin-top: 5px;">
+                  <div *ngFor="let user of postMentionSuggestions" 
+                       class="p-2 border-bottom cursor-pointer hover-bg-light"
+                       (click)="selectPostMention(user)"
+                       style="cursor: pointer;">
+                    <div class="d-flex align-items-center">
+                      <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-2" 
+                           style="width: 32px; height: 32px; object-fit: cover;" alt="Avatar">
+                      <div>
+                        <strong>&#64;{{ user.username }}</strong>
+                        <small class="text-muted d-block" *ngIf="user.bio">{{ user.bio }}</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div class="mb-3">
                 <input type="file" class="form-control" accept="image/*,video/*" (change)="onFileSelected($event)">
@@ -459,7 +562,7 @@
 
               <div *ngIf="showComments[post.id]" class="mt-3">
                 <div class="border-top pt-3">
-                  <div *ngFor="let comment of post.commentsList" class="mb-2">
+                  <div *ngFor="let comment of post.commentsList; let i = index" class="mb-2">
                     <div class="d-flex">
                       <img [src]="comment.author?.profilePicture || 'default.jpg'" 
                            class="rounded-circle me-2" 
@@ -470,7 +573,41 @@
                           <strong>{{comment.author?.username}}</strong>
                           <p class="mb-0">{{comment.content}}</p>
                         </div>
-                        <small class="text-muted">{{comment.createdDate | date:'short'}}</small>
+                        <div class="mt-1">
+                          <small class="text-muted">{{comment.createdDate | date:'short'}}</small>
+                          <button class="btn btn-link btn-sm p-0 ms-2" (click)="toggleCommentReplies(post.id, i)" style="font-size: 11px;">
+                            Reply
+                          </button>
+                          <button *ngIf="comment.replies?.length > 0" class="btn btn-link btn-sm p-0 ms-2" 
+                                  (click)="toggleRepliesVisibility(post.id, i)" style="font-size: 11px;">
+                            {{comment.replies.length}} {{comment.replies.length === 1 ? 'reply' : 'replies'}}
+                          </button>
+                        </div>
+                        
+                        <div *ngIf="comment.showReplyForm" class="mt-2">
+                          <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" placeholder="Reply..." 
+                                   [(ngModel)]="comment.replyText" [name]="'reply-' + comment.id">
+                            <button class="btn btn-primary btn-sm" (click)="addCommentReply(post, i)" 
+                                    [disabled]="!comment.replyText?.trim()">Reply</button>
+                            <button class="btn btn-secondary btn-sm" (click)="cancelCommentReply(post.id, i)">Cancel</button>
+                          </div>
+                        </div>
+                        
+                        <div *ngIf="comment.showReplies && comment.replies?.length > 0" class="mt-2 ms-3">
+                          <div *ngFor="let reply of comment.replies" class="mb-1 p-2 bg-white rounded border">
+                            <div class="d-flex">
+                              <img [src]="reply.author?.profilePicture || 'default.jpg'" 
+                                   class="rounded-circle me-2" 
+                                   style="width: 24px; height: 24px; object-fit: cover;" alt="Avatar">
+                              <div>
+                                <strong class="small">{{reply.author?.username}}</strong>
+                                <p class="mb-0 small">{{reply.content}}</p>
+                                <small class="text-muted" style="font-size: 10px;">{{reply.createdDate | date:'short'}}</small>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

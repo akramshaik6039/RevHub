@@ -180,7 +180,7 @@ export class PostCardComponent {
   }
   
   initializeComment(comment: any) {
-    const initialized = {
+    return {
       ...comment,
       replies: comment.replies || [],
       showReplyForm: false,
@@ -189,8 +189,6 @@ export class PostCardComponent {
       replySuggestions: [],
       selectedReplySuggestionIndex: -1
     };
-    console.log('Initialized comment:', initialized);
-    return initialized;
   }
   
   toggleReply(commentIndex: number) {

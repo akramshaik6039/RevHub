@@ -125,6 +125,21 @@ public class NotificationMongoService {
         notificationRepository.save(notification);
     }
     
+    public void createCommentMentionNotification(User mentionedUser, User mentioner, Long postId, Long commentId, String content) {
+        NotificationMongo notification = new NotificationMongo();
+        notification.setUserId(mentionedUser.getId().toString());
+        notification.setFromUserId(mentioner.getId().toString());
+        notification.setFromUsername(mentioner.getUsername());
+        notification.setFromUserProfilePicture(mentioner.getProfilePicture());
+        notification.setType("MENTION");
+        notification.setMessage(mentioner.getUsername() + " mentioned you in a comment");
+        notification.setPostId(postId);
+        notification.setCommentId(commentId);
+        notification.setCreatedDate(LocalDateTime.now());
+        
+        notificationRepository.save(notification);
+    }
+    
     public void deleteNotification(String notificationId, String username) {
         NotificationMongo notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));

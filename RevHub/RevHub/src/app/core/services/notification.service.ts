@@ -12,6 +12,8 @@ export interface Notification {
   fromUsername?: string;
   fromUserProfilePicture?: string;
   followRequestId?: number;
+  postId?: number;
+  commentId?: number;
 }
 
 @Injectable({

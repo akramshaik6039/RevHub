@@ -37,7 +37,7 @@ public class Comment {
     @JsonIgnore
     private Comment parentComment;
     
-    @OneToMany(mappedBy = "parentComment", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "parentComment", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Comment> replies;
 
     @CreationTimestamp

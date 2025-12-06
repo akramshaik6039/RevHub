@@ -103,20 +103,14 @@
           <!-- Action Buttons -->
           <div class="mb-2 d-flex gap-2">
             <button class="btn btn-outline-primary btn-sm" 
-                    (click)="toggleReply(i)"
-                    style="display: block !important;">
-              <i class="fas fa-reply"></i> Reply ({{i}})
+                    (click)="toggleReply(i)">
+              <i class="fas fa-reply"></i> Reply
             </button>
             <button *ngIf="canDeleteComment(comment)" 
                     class="btn btn-outline-danger btn-sm" 
                     (click)="deleteComment(i)">
               <i class="fas fa-trash"></i> Delete
             </button>
-          </div>
-          
-          <!-- Debug Info -->
-          <div class="small text-muted mb-2">
-            Debug: showReplyForm={{comment.showReplyForm}}, commentIndex={{i}}
           </div>
           
           <!-- Reply Form -->

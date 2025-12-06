@@ -47,6 +47,12 @@ export class DashboardComponent implements OnInit {
   replyingTo: { postId: string, commentId: number } | null = null;
   replyContent = '';
   postVisibility = 'public';
+  showCommentMentionSuggestions = false;
+  commentMentionSuggestions: any[] = [];
+  showPostMentionSuggestions = false;
+  postMentionSuggestions: any[] = [];
+  showSearchMentionSuggestions = false;
+  searchMentionSuggestions: any[] = [];
   
   selectedChat: string | null = null;
   newMessage = '';
@@ -323,7 +329,13 @@ export class DashboardComponent implements OnInit {
     if (this.showComments[post.id]) {
       this.postService.getComments(post.id).subscribe({
         next: (comments) => {
-          post.commentsList = comments;
+          post.commentsList = comments.map(c => ({
+            ...c,
+            showReplies: false,
+            showReplyForm: false,
+            replyText: '',
+            replies: c.replies || []
+          }));
         },
         error: (error) => {
           // Handle error
@@ -389,6 +401,10 @@ export class DashboardComponent implements OnInit {
           if (!post.commentsList) {
             post.commentsList = [];
           }
+          response.showReplies = false;
+          response.showReplyForm = false;
+          response.replyText = '';
+          response.replies = response.replies || [];
           post.commentsList.push(response);
           post.commentsCount = post.commentsList.length;
           this.newComment = '';
@@ -397,6 +413,52 @@ export class DashboardComponent implements OnInit {
           // Handle error
         }
       });
+    }
+  }
+  
+  toggleCommentReplies(postId: number, commentIndex: number) {
+    const post = this.posts.find(p => p.id === postId);
+    if (post && post.commentsList[commentIndex]) {
+      const comment = post.commentsList[commentIndex];
+      comment.showReplyForm = !comment.showReplyForm;
+      if (!comment.showReplyForm) {
+        comment.replyText = '';
+      }
+    }
+  }
+  
+  toggleRepliesVisibility(postId: number, commentIndex: number) {
+    const post = this.posts.find(p => p.id === postId);
+    if (post && post.commentsList[commentIndex]) {
+      post.commentsList[commentIndex].showReplies = !post.commentsList[commentIndex].showReplies;
+    }
+  }
+  
+  addCommentReply(post: any, commentIndex: number) {
+    const comment = post.commentsList[commentIndex];
+    if (comment.replyText?.trim()) {
+      this.postService.addReply(comment.id, comment.replyText).subscribe({
+        next: (reply) => {
+          if (!comment.replies) {
+            comment.replies = [];
+          }
+          comment.replies.push(reply);
+          comment.replyText = '';
+          comment.showReplyForm = false;
+          comment.showReplies = true;
+        },
+        error: (error) => {
+          console.error('Error adding reply:', error);
+        }
+      });
+    }
+  }
+  
+  cancelCommentReply(postId: number, commentIndex: number) {
+    const post = this.posts.find(p => p.id === postId);
+    if (post && post.commentsList[commentIndex]) {
+      post.commentsList[commentIndex].showReplyForm = false;
+      post.commentsList[commentIndex].replyText = '';
     }
   }
 
@@ -1078,6 +1140,34 @@ export class DashboardComponent implements OnInit {
         this.loadConversation(notification.fromUsername!);
         this.unreadCounts[notification.fromUsername!] = 0;
       }, 100);
+    } else if (notification.type === 'MENTION' && notification.postId) {
+      // Navigate to feed and show the post with comments
+      this.setActiveTab('feed');
+      setTimeout(() => {
+        this.scrollToPost(notification.postId!);
+      }, 100);
+    }
+  }
+  
+  scrollToPost(postId: number) {
+    const post = this.posts.find(p => p.id === postId);
+    if (post) {
+      this.showComments[postId] = true;
+      this.postService.getComments(postId).subscribe({
+        next: (comments) => {
+          post.commentsList = comments;
+          setTimeout(() => {
+            const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+            if (postElement) {
+              postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 100);
+        },
+        error: (error) => console.error('Error loading comments:', error)
+      });
+    } else {
+      this.loadFeeds();
+      setTimeout(() => this.scrollToPost(postId), 500);
     }
   }
   
@@ -1217,5 +1307,108 @@ export class DashboardComponent implements OnInit {
       this.unreadCounts[contact] = 0;
     });
     console.log('Manually cleared all unread counts');
+  }
+  
+  onCommentChange(event: any) {
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    const cursorPos = input.selectionStart || 0;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const atIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (atIndex !== -1) {
+      const searchTerm = textBeforeCursor.substring(atIndex + 1);
+      if (!searchTerm.includes(' ')) {
+        this.authService.searchUsers(searchTerm).subscribe({
+          next: (users) => {
+            this.commentMentionSuggestions = users || [];
+            this.showCommentMentionSuggestions = this.commentMentionSuggestions.length > 0;
+          },
+          error: () => {
+            this.showCommentMentionSuggestions = false;
+            this.commentMentionSuggestions = [];
+          }
+        });
+      } else {
+        this.showCommentMentionSuggestions = false;
+      }
+    } else {
+      this.showCommentMentionSuggestions = false;
+    }
+  }
+  
+  selectCommentMention(user: any) {
+    const atIndex = this.newComment.lastIndexOf('@');
+    if (atIndex !== -1) {
+      this.newComment = this.newComment.substring(0, atIndex) + '@' + user.username + ' ';
+    }
+    this.showCommentMentionSuggestions = false;
+    this.commentMentionSuggestions = [];
+  }
+  
+  onPostContentChange(event: any) {
+    const textarea = event.target as HTMLTextAreaElement;
+    const value = textarea.value;
+    const cursorPos = textarea.selectionStart || 0;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const atIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (atIndex !== -1) {
+      const searchTerm = textBeforeCursor.substring(atIndex + 1);
+      if (!searchTerm.includes(' ')) {
+        this.authService.searchUsers(searchTerm).subscribe({
+          next: (users) => {
+            this.postMentionSuggestions = users || [];
+            this.showPostMentionSuggestions = this.postMentionSuggestions.length > 0;
+          },
+          error: () => {
+            this.showPostMentionSuggestions = false;
+            this.postMentionSuggestions = [];
+          }
+        });
+      } else {
+        this.showPostMentionSuggestions = false;
+      }
+    } else {
+      this.showPostMentionSuggestions = false;
+    }
+  }
+  
+  selectPostMention(user: any) {
+    const atIndex = this.newPostContent.lastIndexOf('@');
+    if (atIndex !== -1) {
+      this.newPostContent = this.newPostContent.substring(0, atIndex) + '@' + user.username + ' ';
+    }
+    this.showPostMentionSuggestions = false;
+    this.postMentionSuggestions = [];
+  }
+  
+  onSearchInputChange(event: any) {
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    
+    if (value.startsWith('@')) {
+      const searchTerm = value.substring(1);
+      this.authService.searchUsers(searchTerm).subscribe({
+        next: (users) => {
+          this.searchMentionSuggestions = users || [];
+          this.showSearchMentionSuggestions = this.searchMentionSuggestions.length > 0;
+        },
+        error: () => {
+          this.showSearchMentionSuggestions = false;
+          this.searchMentionSuggestions = [];
+        }
+      });
+    } else {
+      this.showSearchMentionSuggestions = false;
+      this.onSearchInput();
+    }
+  }
+  
+  selectSearchMention(user: any) {
+    this.searchQuery = '@' + user.username;
+    this.showSearchMentionSuggestions = false;
+    this.searchMentionSuggestions = [];
+    this.onSearchInput();
   }
 }

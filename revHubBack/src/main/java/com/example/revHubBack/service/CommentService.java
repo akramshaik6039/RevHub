@@ -27,6 +27,9 @@ public class CommentService {
     
     @Autowired
     private FollowService followService;
+    
+    @Autowired
+    private NotificationMongoService notificationService;
 
     public List<Comment> getCommentsByPost(Long postId) {
         Post post = postRepository.findById(postId)
@@ -99,6 +102,8 @@ public class CommentService {
         
         post.setCommentsCount(post.getCommentsCount() + 1);
         postRepository.save(post);
+        
+        processMentions(savedComment, user, post);
 
         return savedComment;
     }
@@ -129,6 +134,8 @@ public class CommentService {
         // Don't increment post comment count for replies
         // Only top-level comments count towards the total
         
+        processMentions(savedReply, user, post);
+        
         return savedReply;
     }
 
@@ -149,5 +156,24 @@ public class CommentService {
         
         post.setCommentsCount(Math.max(0, post.getCommentsCount() - 1));
         postRepository.save(post);
+    }
+    
+    private void processMentions(Comment comment, User author, Post post) {
+        String content = comment.getContent();
+        if (content == null) return;
+        
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("@(\\w+)");
+        java.util.regex.Matcher matcher = pattern.matcher(content);
+        
+        while (matcher.find()) {
+            String mentionedUsername = matcher.group(1);
+            try {
+                User mentionedUser = userRepository.findByUsername(mentionedUsername).orElse(null);
+                if (mentionedUser != null && !mentionedUser.getId().equals(author.getId())) {
+                    notificationService.createCommentMentionNotification(mentionedUser, author, post.getId(), comment.getId(), content);
+                }
+            } catch (Exception e) {
+            }
+        }
     }
 }
