@@ -3,7 +3,7 @@
     <div class="card">
       <div class="card-body text-center">
         <img 
-          [src]="user?.profilePicture || '../../../../public/profile.jpg'" 
+          [src]="getImageUrl(user?.profilePicture) || '../../../../public/profile.jpg'" 
           class="rounded-circle mb-3" 
           alt="Profile"
           style="width: 150px; height: 150px; object-fit: cover;">
@@ -29,8 +29,9 @@
           <span class="badge bg-secondary"><i class="fas fa-lock"></i> Private Account</span>
         </div>
         <button 
-          *ngIf="isOwnProfile" 
-          class="btn btn-outline-primary">Edit Profile</button>
+          *ngIf="isOwnProfile && !isEditMode" 
+          class="btn btn-outline-primary"
+          (click)="toggleEditMode()">Edit Profile</button>
         <button 
           *ngIf="!isOwnProfile" 
           class="btn"
@@ -40,6 +41,82 @@
           <span *ngIf="isFollowLoading" class="spinner-border spinner-border-sm me-2"></span>
           {{getFollowButtonText()}}
         </button>
+      </div>
+    </div>
+
+    <!-- Edit Profile Form -->
+    <div *ngIf="isEditMode" class="card mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Edit Profile</h5>
+        
+        <!-- Profile Photo Upload -->
+        <div class="mb-3 text-center">
+          <img 
+            [src]="previewUrl || getImageUrl(user?.profilePicture) || '../../../../public/profile.jpg'" 
+            class="rounded-circle mb-2" 
+            style="width: 100px; height: 100px; object-fit: cover;"
+            alt="Profile Preview">
+          <div>
+            <input 
+              type="file" 
+              #fileInput 
+              (change)="onFileSelected($event)" 
+              accept="image/*" 
+              class="form-control mb-2">
+            <small class="text-muted">Select an image file (max 5MB)</small>
+            <div *ngIf="selectedFile" class="mt-2">
+              <small class="text-success">✓ File selected: {{selectedFile.name}}</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bio Input -->
+        <div class="mb-3">
+          <label class="form-label">Bio</label>
+          <textarea 
+            class="form-control" 
+            [(ngModel)]="editForm.bio" 
+            rows="3"
+            placeholder="Tell us about yourself..."></textarea>
+        </div>
+
+        <!-- Privacy Setting -->
+        <div class="mb-3 form-check">
+          <input 
+            type="checkbox" 
+            class="form-check-input" 
+            [(ngModel)]="editForm.isPrivate"
+            id="privateCheck">
+          <label class="form-check-label" for="privateCheck">Private Account</label>
+        </div>
+
+        <!-- Debug Info -->
+        <div class="mb-3" *ngIf="selectedFile">
+          <small class="text-info">Debug: File ready for upload - {{selectedFile.name}} ({{selectedFile.size}} bytes)</small>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2">
+          <button 
+            class="btn btn-primary" 
+            (click)="updateProfile()"
+            [disabled]="isUpdating">
+            <span *ngIf="isUpdating" class="spinner-border spinner-border-sm me-2"></span>
+            {{isUpdating ? 'Saving...' : 'Save Changes'}}
+          </button>
+          <button 
+            class="btn btn-secondary" 
+            (click)="toggleEditMode()"
+            [disabled]="isUpdating">
+            Cancel
+          </button>
+          <button 
+            class="btn btn-info btn-sm" 
+            (click)="testFileUpload()"
+            *ngIf="selectedFile && !isUpdating">
+            Test Upload
+          </button>
+        </div>
       </div>
     </div>
     
@@ -88,7 +165,7 @@
             <div class="border-top pt-3">
               <div *ngFor="let comment of post.commentsList" class="mb-2">
                 <div class="d-flex">
-                  <img [src]="comment.author?.profilePicture || 'default.jpg'" 
+                  <img [src]="getImageUrl(comment.author?.profilePicture) || 'default.jpg'" 
                        class="rounded-circle me-2" 
                        style="width: 30px; height: 30px; object-fit: cover;" 
                        alt="Avatar">

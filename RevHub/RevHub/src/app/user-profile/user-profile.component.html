@@ -17,7 +17,7 @@
 
       <div *ngIf="!isLoading && user" class="card mb-4">
         <div class="card-body text-center">
-          <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle mb-3" alt="Profile" style="width: 100px; height: 100px; object-fit: cover;">
+          <img [src]="getImageUrl(user.profilePicture) || 'default.jpg'" class="rounded-circle mb-3" alt="Profile" style="width: 100px; height: 100px; object-fit: cover;">
           <h3>{{user.username}}</h3>
           <p class="text-muted">&#64;{{user.username}}</p>
           <p *ngIf="user.bio" class="mb-3">{{user.bio}}</p>
@@ -129,7 +129,7 @@
                 <div *ngFor="let post of getFilteredPosts()" class="card mb-3" style="max-width: 600px; margin: 0 auto;" [id]="'post-' + post.id">
                   <div class="card-body">
                     <div class="d-flex align-items-center mb-3">
-                      <img [src]="user?.profilePicture || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
+                      <img [src]="getImageUrl(user?.profilePicture) || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
                       <div>
                         <h6 class="mb-0">{{post.author?.username}}</h6>
                         <small class="text-muted">{{post.createdDate | date:'MMM d, y'}}</small>
@@ -154,7 +154,7 @@
                     <div *ngIf="showComments[post.id]" class="border-top pt-3">
                       <div *ngFor="let comment of post.commentsList" class="mb-2">
                         <div class="d-flex">
-                          <img [src]="comment.author?.profilePicture || 'default.jpg'" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;" alt="Avatar">
+                          <img [src]="getImageUrl(comment.author?.profilePicture) || 'default.jpg'" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;" alt="Avatar">
                           <div class="flex-grow-1">
                             <div class="bg-light rounded p-2">
                               <strong class="small">{{comment.author?.username}}</strong>

@@ -20,7 +20,7 @@
            (click)="markAsRead(notification)">
         <div class="d-flex w-100">
           <img *ngIf="notification.fromUserProfilePicture" 
-               [src]="notification.fromUserProfilePicture" 
+               [src]="getImageUrl(notification.fromUserProfilePicture) || 'default.jpg'" 
                class="rounded-circle me-3" 
                style="width: 40px; height: 40px; object-fit: cover;" 
                alt="Profile">

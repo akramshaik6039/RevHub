@@ -1,7 +1,7 @@
 <div class="card mb-3" *ngIf="post">
   <div class="card-body">
     <div class="d-flex align-items-center mb-3">
-      <img [src]="post.author.profilePicture || 'https://via.placeholder.com/40'" 
+      <img [src]="getImageUrl(post.author.profilePicture) || 'https://via.placeholder.com/40'" 
            class="rounded-circle me-3" 
            alt="Avatar"
            style="width: 40px; height: 40px; object-fit: cover;">
@@ -86,7 +86,7 @@
         <div *ngFor="let comment of comments; let i = index" class="mb-3 p-3 bg-light rounded">
           <!-- Comment Header -->
           <div class="d-flex align-items-start mb-2">
-            <img [src]="comment.author.profilePicture || 'https://via.placeholder.com/30'" 
+            <img [src]="getImageUrl(comment.author.profilePicture) || 'https://via.placeholder.com/30'" 
                  class="rounded-circle me-2" 
                  style="width: 30px; height: 30px; object-fit: cover;">
             <div class="flex-grow-1">
@@ -150,7 +150,7 @@
           <div *ngIf="comment.replies?.length > 0" class="ms-4">
             <div *ngFor="let reply of comment.replies" class="mb-2 p-2 bg-white rounded border">
               <div class="d-flex align-items-start">
-                <img [src]="reply.author.profilePicture || 'https://via.placeholder.com/25'" 
+                <img [src]="getImageUrl(reply.author.profilePicture) || 'https://via.placeholder.com/25'" 
                      class="rounded-circle me-2" 
                      style="width: 25px; height: 25px; object-fit: cover;">
                 <div>

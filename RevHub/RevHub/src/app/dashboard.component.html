@@ -30,7 +30,7 @@
                  (click)="selectSearchMention(user)"
                  style="cursor: pointer;">
               <div class="d-flex align-items-center">
-                <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-2" 
+                <img [src]="getImageUrl(user.profilePicture) || 'default.jpg'" class="rounded-circle me-2" 
                      style="width: 32px; height: 32px; object-fit: cover;" alt="Avatar">
                 <div>
                   <strong>&#64;{{ user.username }}</strong>
@@ -99,7 +99,7 @@
                 <div class="card-body py-2">
                   <div class="d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">
-                      <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
+                      <img [src]="getImageUrl(user.profilePicture) || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
                       <div>
                         <h6 class="mb-0">{{user.username}}</h6>
                         <small class="text-muted">{{user.bio || 'No bio available'}}</small>
@@ -121,7 +121,7 @@
               <div *ngFor="let post of getPostResults()" class="card mb-2" style="max-width: 600px; margin: 0 auto;">
                 <div class="card-body py-3">
                   <div class="d-flex align-items-center mb-2">
-                    <img [src]="post.author?.profilePicture || 'default.jpg'" 
+                    <img [src]="getImageUrl(post.author?.profilePicture) || 'default.jpg'" 
                          class="rounded-circle me-2" 
                          alt="Avatar" 
                          style="width: 32px; height: 32px; object-fit: cover; cursor: pointer;" 
@@ -171,7 +171,7 @@
                     <h6 class="mb-3"><i class="fas fa-comments"></i> Comments</h6>
                     <div *ngFor="let comment of post.commentsList; let i = index" class="mb-3">
                       <div class="d-flex">
-                        <img [src]="comment.author?.profilePicture || 'default.jpg'" 
+                        <img [src]="getImageUrl(comment.author?.profilePicture) || 'default.jpg'" 
                              class="rounded-circle me-3" 
                              style="width: 32px; height: 32px; object-fit: cover;" 
                              alt="Avatar">
@@ -230,7 +230,7 @@
           <div class="card mb-2" *ngFor="let post of posts" style="max-width: 600px; margin: 0 auto;" [attr.data-post-id]="post.id">
           <div class="card-body py-3">
             <div class="d-flex align-items-center mb-2">
-              <img [src]="post.author?.profilePicture || 'default.jpg'" 
+              <img [src]="getImageUrl(post.author?.profilePicture) || 'default.jpg'" 
                    class="rounded-circle me-2" 
                    alt="Avatar" 
                    style="width: 32px; height: 32px; object-fit: cover; cursor: pointer;" 
@@ -306,7 +306,7 @@
               <h6 class="mb-3" style="color: #495057;"><i class="fas fa-comments"></i> Comments</h6>
               <div *ngFor="let comment of post.commentsList; let i = index" class="mb-3">
                 <div class="d-flex">
-                  <img [src]="comment.author?.profilePicture || 'default.jpg'" 
+                  <img [src]="getImageUrl(comment.author?.profilePicture) || 'default.jpg'" 
                        class="rounded-circle me-3" 
                        style="width: 32px; height: 32px; object-fit: cover;" 
                        alt="Avatar">
@@ -354,7 +354,7 @@
                     <div *ngIf="comment.showReplies && comment.replies?.length > 0" class="mt-2 ms-3">
                       <div *ngFor="let reply of comment.replies" class="mb-2 p-2 bg-white rounded border">
                         <div class="d-flex align-items-start">
-                          <img [src]="reply.author?.profilePicture || 'default.jpg'" 
+                          <img [src]="getImageUrl(reply.author?.profilePicture) || 'default.jpg'" 
                                class="rounded-circle me-2" 
                                style="width: 24px; height: 24px; object-fit: cover;" 
                                alt="Avatar">
@@ -394,7 +394,7 @@
                   <div *ngFor="let user of commentMentionSuggestions" 
                        class="mention-item d-flex align-items-center p-2 border-bottom mention-hover" 
                        (click)="selectCommentMention(user)">
-                    <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-2" 
+                    <img [src]="getImageUrl(user.profilePicture) || 'default.jpg'" class="rounded-circle me-2" 
                          style="width: 32px; height: 32px; object-fit: cover;" alt="Avatar">
                     <div>
                       <div class="fw-bold">{{user.username}}</div>
@@ -453,7 +453,7 @@
                        (click)="selectPostMention(user)"
                        style="cursor: pointer;">
                     <div class="d-flex align-items-center">
-                      <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-2" 
+                      <img [src]="getImageUrl(user.profilePicture) || 'default.jpg'" class="rounded-circle me-2" 
                            style="width: 32px; height: 32px; object-fit: cover;" alt="Avatar">
                       <div>
                         <strong>&#64;{{ user.username }}</strong>
@@ -508,7 +508,7 @@
       <div class="container">
         <div class="card mb-4">
           <div class="card-body text-center" *ngIf="!isEditingProfile">
-            <img [src]="userProfile?.profilePicture || 'default.jpg'" class="rounded-circle mb-3" alt="Profile" style="width: 100px; height: 100px; object-fit: cover;">
+            <img [src]="getImageUrl(userProfile?.profilePicture) || 'default.jpg'" class="rounded-circle mb-3" alt="Profile" style="width: 100px; height: 100px; object-fit: cover;">
             <h3>{{profileName}}</h3>
             <p class="text-muted">&#64;{{profileUsername}}</p>
             <p class="text-muted" *ngIf="userProfile?.bio">{{userProfile?.bio}}</p>
@@ -550,7 +550,7 @@
             <h4 class="text-center mb-4">Edit Profile</h4>
             <form>
               <div class="mb-3 text-center">
-                <img [src]="userProfile?.profilePicture || 'default.jpg'" class="rounded-circle mb-2" alt="Profile" style="width: 80px; height: 80px; object-fit: cover;">
+                <img [src]="getImageUrl(userProfile?.profilePicture) || 'default.jpg'" class="rounded-circle mb-2" alt="Profile" style="width: 80px; height: 80px; object-fit: cover;">
                 <div>
                   <input type="file" class="form-control" accept="image/*" (change)="onProfilePictureSelected($event)" #fileInput style="display: none;">
                   <button type="button" class="btn btn-sm btn-outline-primary" (click)="fileInput.click()">Change Picture</button>
@@ -579,7 +579,7 @@
           <div class="list-group" *ngIf="followersList.length > 0">
             <div class="list-group-item d-flex align-items-center justify-content-between" *ngFor="let follower of followersList">
               <div class="d-flex align-items-center">
-                <img [src]="follower.profilePicture || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
+                <img [src]="getImageUrl(follower.profilePicture) || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
                 <div>
                   <h6 class="mb-0">{{follower.username}}</h6>
                   <small class="text-muted">&#64;{{follower.username}}</small>
@@ -614,7 +614,7 @@
           <div class="list-group" *ngIf="followingList.length > 0">
             <div class="list-group-item d-flex align-items-center justify-content-between" *ngFor="let following of followingList">
               <div class="d-flex align-items-center">
-                <img [src]="following.profilePicture || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
+                <img [src]="getImageUrl(following.profilePicture) || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
                 <div>
                   <h6 class="mb-0">{{following.username}}</h6>
                   <small class="text-muted">&#64;{{following.username}}</small>
@@ -696,7 +696,7 @@
               <div class="card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                   <div class="d-flex align-items-center">
-                    <img [src]="userProfile?.profilePicture || 'default.jpg'" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;" alt="Avatar">
+                    <img [src]="getImageUrl(userProfile?.profilePicture) || 'default.jpg'" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;" alt="Avatar">
                     <div>
                       <h6 class="mb-0">{{selectedPost.author?.username}}</h6>
                       <small class="text-muted">{{selectedPost.createdDate | date:'MMM d, y'}}</small>
@@ -734,7 +734,7 @@
                     <div *ngIf="showComments[selectedPost.id]" class="border-top pt-3">
                       <div *ngFor="let comment of selectedPost.commentsList" class="mb-2">
                         <div class="d-flex">
-                          <img [src]="comment.author?.profilePicture || 'default.jpg'" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;" alt="Avatar">
+                          <img [src]="getImageUrl(comment.author?.profilePicture) || 'default.jpg'" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;" alt="Avatar">
                           <div class="flex-grow-1">
                             <div class="bg-light rounded p-2">
                               <strong class="small">{{comment.author?.username}}</strong>
@@ -783,7 +783,7 @@
               <button class="list-group-item list-group-item-action d-flex align-items-center" 
                       *ngFor="let user of chatSearchResults" 
                       (click)="startChat(user)">
-                <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
+                <img [src]="getImageUrl(user.profilePicture) || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
                 <div>
                   <h6 class="mb-0">{{user.username}}</h6>
                   <small class="text-muted">Start conversation</small>
@@ -805,26 +805,26 @@
             <button class="list-group-item list-group-item-action d-flex align-items-center justify-content-between" 
                     *ngFor="let contact of contacts" 
                     (click)="selectChat(contact)"
-                    [class.chat-contact-unread]="unreadCounts[contact] > 0">
+                    [class.chat-contact-unread]="unreadCounts[contact.username] > 0">
               <div class="d-flex align-items-center">
                 <div class="position-relative">
-                  <img [src]="'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
-                  <span *ngIf="unreadCounts[contact] > 0" 
+                  <img [src]="getImageUrl(contact.profilePicture) || 'default.jpg'" class="rounded-circle me-3" alt="Avatar" style="width: 40px; height: 40px; object-fit: cover;">
+                  <span *ngIf="unreadCounts[contact.username] > 0" 
                         class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle chat-unread-indicator"
                         style="width: 12px; height: 12px;">
                     <span class="visually-hidden">New messages</span>
                   </span>
                 </div>
                 <div>
-                  <h6 class="mb-0" [class.fw-bold]="unreadCounts[contact] > 0" [class.text-danger]="unreadCounts[contact] > 0">{{contact}}</h6>
-                  <small class="text-muted" *ngIf="unreadCounts[contact] === 0">Click to chat</small>
-                  <small class="text-danger fw-bold" *ngIf="unreadCounts[contact] > 0">
-                    <i class="fas fa-envelope me-1"></i>{{unreadCounts[contact]}} new message{{unreadCounts[contact] > 1 ? 's' : ''}}
+                  <h6 class="mb-0" [class.fw-bold]="unreadCounts[contact.username] > 0" [class.text-danger]="unreadCounts[contact.username] > 0">{{contact.username}}</h6>
+                  <small class="text-muted" *ngIf="unreadCounts[contact.username] === 0">Click to chat</small>
+                  <small class="text-danger fw-bold" *ngIf="unreadCounts[contact.username] > 0">
+                    <i class="fas fa-envelope me-1"></i>{{unreadCounts[contact.username]}} new message{{unreadCounts[contact.username] > 1 ? 's' : ''}}
                   </small>
                 </div>
               </div>
-              <div *ngIf="unreadCounts[contact] > 0" class="d-flex align-items-center">
-                <span class="badge bg-danger rounded-pill unread-badge">{{unreadCounts[contact]}}</span>
+              <div *ngIf="unreadCounts[contact.username] > 0" class="d-flex align-items-center">
+                <span class="badge bg-danger rounded-pill unread-badge">{{unreadCounts[contact.username]}}</span>
               </div>
             </button>
           </div>
@@ -882,7 +882,7 @@
             <div class="d-flex justify-content-between align-items-start">
               <div class="d-flex w-100">
                 <img *ngIf="notification.fromUserProfilePicture" 
-                     [src]="notification.fromUserProfilePicture" 
+                     [src]="getImageUrl(notification.fromUserProfilePicture) || 'default.jpg'" 
                      class="rounded-circle me-3" 
                      style="width: 40px; height: 40px; object-fit: cover;" 
                      alt="Profile">
@@ -966,7 +966,7 @@
       </div>
       <div class="card-body p-0">
         <div *ngFor="let user of suggestedUsers" class="d-flex align-items-center p-2 border-bottom">
-          <img [src]="user.profilePicture || 'default.jpg'" class="rounded-circle me-2" alt="Avatar" style="width: 35px; height: 35px; object-fit: cover; cursor: pointer;" (click)="goToProfile(user.username)">
+          <img [src]="getImageUrl(user.profilePicture) || 'default.jpg'" class="rounded-circle me-2" alt="Avatar" style="width: 35px; height: 35px; object-fit: cover; cursor: pointer;" (click)="goToProfile(user.username)">
           <div class="flex-grow-1">
             <h6 class="mb-0 small" style="cursor: pointer;" (click)="goToProfile(user.username)">{{user.username}}</h6>
             <small class="text-muted">&#64;{{user.username}}</small>

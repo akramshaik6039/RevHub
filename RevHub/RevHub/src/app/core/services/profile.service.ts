@@ -43,6 +43,14 @@ export class ProfileService {
   updateProfile(updates: { bio?: string; profilePicture?: string; isPrivate?: string }): Observable<User> {
     return this.http.put<User>(this.apiUrl, updates);
   }
+
+  uploadProfilePhoto(file: File): Observable<any> {
+    console.log('ProfileService: uploadProfilePhoto called with file:', file);
+    const formData = new FormData();
+    formData.append('file', file);
+    console.log('FormData created, making HTTP request to:', `${this.apiUrl}/upload-photo`);
+    return this.http.post(`${this.apiUrl}/upload-photo`, formData);
+  }
   
   getAllUsers(): Observable<User[]> {
     return this.http.get<User[]>(`${this.apiUrl}/all`);

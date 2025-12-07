@@ -60,7 +60,7 @@ public class WebSecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> 
-                auth.requestMatchers("/", "/auth/**", "/api/public/**").permitAll()
+                auth.requestMatchers("/", "/auth/**", "/api/public/**", "/uploads/**").permitAll()
                     .requestMatchers("OPTIONS", "/**").permitAll()
                     .anyRequest().authenticated()
             );

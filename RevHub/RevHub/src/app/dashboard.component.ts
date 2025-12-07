@@ -62,7 +62,8 @@ export class DashboardComponent implements OnInit {
   
   selectedChat: string | null = null;
   newMessage = '';
-  contacts: string[] = [];
+  contacts: User[] = [];
+  contactUsernames: string[] = [];
   messages: { [key: string]: any[] } = {};
   chatSearchQuery = '';
   chatSearchResults: any[] = [];
@@ -211,24 +212,39 @@ export class DashboardComponent implements OnInit {
   }
 
   saveProfile() {
-    const updates: any = {};
-    
-    if (this.editBio !== (this.userProfile?.bio || '')) {
-      updates.bio = this.editBio;
-    }
+    console.log('Save profile called');
+    console.log('Selected profile picture:', this.selectedProfilePicture);
+    console.log('Edit bio:', this.editBio);
     
     if (this.selectedProfilePicture) {
-      // Convert image to base64 for simple storage
-      const reader = new FileReader();
-      reader.onload = () => {
-        updates.profilePicture = reader.result as string;
-        this.updateProfile(updates);
-      };
-      reader.readAsDataURL(this.selectedProfilePicture);
-    } else if (Object.keys(updates).length > 0) {
+      // Upload photo first using the proper file upload endpoint
+      console.log('Uploading profile photo...');
+      this.profileService.uploadProfilePhoto(this.selectedProfilePicture).subscribe({
+        next: (response) => {
+          console.log('Photo upload successful:', response);
+          // Then update bio if changed
+          this.updateBioIfNeeded();
+        },
+        error: (error) => {
+          console.error('Error uploading photo:', error);
+          alert('Failed to upload photo: ' + (error.error?.error || error.message));
+        }
+      });
+    } else {
+      // Just update bio if no photo selected
+      this.updateBioIfNeeded();
+    }
+  }
+  
+  updateBioIfNeeded() {
+    if (this.editBio !== (this.userProfile?.bio || '')) {
+      const updates = { bio: this.editBio };
       this.updateProfile(updates);
     } else {
+      // No changes, just close edit mode
       this.isEditingProfile = false;
+      this.selectedProfilePicture = null;
+      this.loadUserProfile(); // Refresh to show any photo changes
     }
   }
   
@@ -244,7 +260,7 @@ export class DashboardComponent implements OnInit {
       error: (error) => {
         console.error('Error updating profile:', error);
         console.error('Error details:', error.error);
-
+        alert('Failed to update profile: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -631,21 +647,21 @@ export class DashboardComponent implements OnInit {
     this.showSuggestions = false;
   }
 
-  selectChat(contact: string) {
-    this.selectedChat = contact;
-    this.loadConversation(contact);
+  selectChat(contact: User) {
+    this.selectedChat = contact.username;
+    this.loadConversation(contact.username);
     
     // Immediately reset UI count for better UX
-    this.unreadCounts[contact] = 0;
+    this.unreadCounts[contact.username] = 0;
     
     // Mark messages as read in backend
-    this.chatService.markAsRead(contact).subscribe({
+    this.chatService.markAsRead(contact.username).subscribe({
       next: () => {
-        console.log(`Successfully marked messages as read for ${contact}`);
+        console.log(`Successfully marked messages as read for ${contact.username}`);
       },
       error: (error) => {
-        console.error(`Error marking messages as read for ${contact}:`, error);
-        console.error('Error details:', error.error);
+        console.error(`Error marking messages as read for ${contact.username}:`, error);
+        console.error('Error details:', error);
         // Refresh counts to get actual state from backend
         setTimeout(() => {
           this.refreshUnreadCounts();
@@ -1257,15 +1273,15 @@ export class DashboardComponent implements OnInit {
   
   refreshUnreadCounts() {
     // Use individual calls since bulk endpoint might not be working
-    this.contacts.forEach(contact => {
-      this.chatService.getUnreadCount(contact).subscribe({
+    this.contactUsernames.forEach(username => {
+      this.chatService.getUnreadCount(username).subscribe({
         next: (count) => {
-          this.unreadCounts[contact] = count;
-          console.log(`Unread count for ${contact}: ${count}`);
+          this.unreadCounts[username] = count;
+          console.log(`Unread count for ${username}: ${count}`);
         },
         error: (err) => {
-          console.error(`Error getting unread count for ${contact}:`, err);
-          this.unreadCounts[contact] = 0;
+          console.error(`Error getting unread count for ${username}:`, err);
+          this.unreadCounts[username] = 0;
         }
       });
     });
@@ -1295,10 +1311,32 @@ export class DashboardComponent implements OnInit {
   
   loadChatContacts() {
     this.chatService.getChatContacts().subscribe({
-      next: (contacts) => {
-        console.log('Chat contacts loaded:', contacts);
+      next: (contactUsernames) => {
+        console.log('Chat contacts loaded:', contactUsernames);
         // Filter out current user from contacts
-        this.contacts = contacts.filter(contact => contact !== this.currentUser?.username);
+        this.contactUsernames = contactUsernames.filter(contact => contact !== this.currentUser?.username);
+        
+        // Load profile data for each contact
+        this.contacts = [];
+        this.contactUsernames.forEach(username => {
+          this.profileService.getProfile(username).subscribe({
+            next: (profile) => {
+              this.contacts.push(profile);
+            },
+            error: (error) => {
+              console.error(`Error loading profile for ${username}:`, error);
+              // Add a basic user object if profile loading fails
+              this.contacts.push({
+                id: 0,
+                username: username,
+                email: '',
+                createdDate: '',
+                profilePicture: undefined
+              });
+            }
+          });
+        });
+        
         this.refreshUnreadCounts();
       },
       error: (error) => {
@@ -1350,8 +1388,8 @@ export class DashboardComponent implements OnInit {
   startGlobalUnreadCountRefresh() {
     // Load contacts and refresh counts immediately
     this.chatService.getChatContacts().subscribe({
-      next: (contacts) => {
-        this.contacts = contacts.filter(contact => contact !== this.currentUser?.username);
+      next: (contactUsernames) => {
+        this.contactUsernames = contactUsernames.filter(contact => contact !== this.currentUser?.username);
         this.refreshUnreadCounts();
       },
       error: (error) => console.error('Error loading contacts:', error)
@@ -1359,7 +1397,7 @@ export class DashboardComponent implements OnInit {
 
     // Set up global refresh every 5 seconds
     this.globalUnreadInterval = setInterval(() => {
-      if (this.contacts.length > 0) {
+      if (this.contactUsernames.length > 0) {
         this.refreshUnreadCounts();
       }
     }, 5000);
@@ -1380,15 +1418,22 @@ export class DashboardComponent implements OnInit {
   }
   
   moveContactToTop(username: string) {
-    // Remove from current position
-    this.contacts = this.contacts.filter(contact => contact !== username);
-    // Add to top
-    this.contacts.unshift(username);
+    // Remove from current position in contactUsernames
+    this.contactUsernames = this.contactUsernames.filter(contact => contact !== username);
+    // Add to top of contactUsernames
+    this.contactUsernames.unshift(username);
+    
+    // Also reorder the contacts array
+    const contactUser = this.contacts.find(contact => contact.username === username);
+    if (contactUser) {
+      this.contacts = this.contacts.filter(contact => contact.username !== username);
+      this.contacts.unshift(contactUser);
+    }
   }
   
   clearAllUnreadCounts() {
-    this.contacts.forEach(contact => {
-      this.unreadCounts[contact] = 0;
+    this.contactUsernames.forEach(username => {
+      this.unreadCounts[username] = 0;
     });
     console.log('Manually cleared all unread counts');
   }
@@ -1574,6 +1619,24 @@ export class DashboardComponent implements OnInit {
 
   setProfileActiveTab(tab: string) {
     this.profileActiveTab = tab;
+  }
+
+  // Helper method to get full image URL
+  getImageUrl(profilePicture: string | undefined): string | null {
+    if (!profilePicture) return null;
+    
+    // If it's already a full URL, return as is
+    if (profilePicture.startsWith('http')) {
+      return profilePicture;
+    }
+    
+    // If it's a relative path, prepend backend server URL
+    if (profilePicture.startsWith('/uploads/')) {
+      return `http://localhost:8080${profilePicture}`;
+    }
+    
+    // If it's just a filename, assume it's in uploads/profiles/
+    return `http://localhost:8080/uploads/profiles/${profilePicture}`;
   }
 
   getProfilePhotoPosts() {

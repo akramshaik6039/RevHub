@@ -26,6 +26,16 @@ export class ProfileComponent implements OnInit {
   followStatus: string = 'NOT_FOLLOWING';
   isFollowLoading = false;
 
+  // Edit profile properties
+  isEditMode = false;
+  editForm = {
+    bio: '',
+    isPrivate: false
+  };
+  selectedFile: File | null = null;
+  previewUrl: string | null = null;
+  isUpdating = false;
+
   constructor(
     private profileService: ProfileService,
     private postService: PostService,
@@ -52,6 +62,8 @@ export class ProfileComponent implements OnInit {
     this.profileService.getProfile(this.username).subscribe({
       next: (user) => {
         this.user = user;
+        this.editForm.bio = user.bio || '';
+        this.editForm.isPrivate = user.isPrivate || false;
         this.isLoading = false;
       },
       error: (error) => {
@@ -224,5 +236,145 @@ export class ProfileComponent implements OnInit {
     } else if (this.followStatus === 'NOT_FOLLOWING') {
       this.followUser();
     }
+  }
+
+  // Edit Profile Methods
+  toggleEditMode() {
+    this.isEditMode = !this.isEditMode;
+    if (!this.isEditMode) {
+      // Reset form when canceling
+      this.editForm.bio = this.user?.bio || '';
+      this.editForm.isPrivate = this.user?.isPrivate || false;
+      this.selectedFile = null;
+      this.previewUrl = null;
+    }
+  }
+
+  onFileSelected(event: any) {
+    console.log('File selection event triggered:', event);
+    const file = event.target.files[0];
+    console.log('Selected file:', file);
+    
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+      
+      this.selectedFile = file;
+      console.log('File set to selectedFile:', this.selectedFile);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.previewUrl = e.target?.result as string;
+        console.log('Preview URL set:', this.previewUrl ? 'Success' : 'Failed');
+      };
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      console.log('No file selected');
+    }
+  }
+
+  updateProfile() {
+    console.log('Update profile called');
+    console.log('Selected file:', this.selectedFile);
+    console.log('Edit form:', this.editForm);
+    
+    this.isUpdating = true;
+    
+    if (this.selectedFile) {
+      console.log('Uploading photo first...');
+      // Upload photo first
+      this.profileService.uploadProfilePhoto(this.selectedFile).subscribe({
+        next: (response) => {
+          console.log('Photo upload response:', response);
+          // Update user profile picture immediately
+          if (this.user && response.profilePictureUrl) {
+            this.user.profilePicture = response.profilePictureUrl;
+          }
+          // Then update other profile data
+          this.updateProfileData();
+        },
+        error: (error) => {
+          console.error('Error uploading photo:', error);
+          alert('Failed to upload photo: ' + (error.error?.error || error.message));
+          this.isUpdating = false;
+        }
+      });
+    } else {
+      console.log('No photo to upload, updating profile data only...');
+      // Just update profile data
+      this.updateProfileData();
+    }
+  }
+
+  private updateProfileData() {
+    const updates = {
+      bio: this.editForm.bio,
+      isPrivate: this.editForm.isPrivate.toString()
+    };
+
+    this.profileService.updateProfile(updates).subscribe({
+      next: (updatedUser) => {
+        this.user = updatedUser;
+        this.isEditMode = false;
+        this.selectedFile = null;
+        this.previewUrl = null;
+        this.isUpdating = false;
+        console.log('Profile updated successfully');
+      },
+      error: (error) => {
+        console.error('Error updating profile:', error);
+        this.isUpdating = false;
+      }
+    });
+  }
+
+  // Test method for debugging
+  testFileUpload() {
+    if (this.selectedFile) {
+      console.log('Testing file upload with:', this.selectedFile);
+      this.profileService.uploadProfilePhoto(this.selectedFile).subscribe({
+        next: (response) => {
+          console.log('Test upload successful:', response);
+          alert('Test upload successful! Response: ' + JSON.stringify(response));
+        },
+        error: (error) => {
+          console.error('Test upload failed:', error);
+          alert('Test upload failed: ' + JSON.stringify(error));
+        }
+      });
+    } else {
+      alert('No file selected for test');
+    }
+  }
+
+  // Helper method to get full image URL
+  getImageUrl(profilePicture: string | undefined): string | null {
+    if (!profilePicture) return null;
+    
+    // If it's already a full URL, return as is
+    if (profilePicture.startsWith('http')) {
+      return profilePicture;
+    }
+    
+    // If it's a relative path, prepend backend server URL
+    if (profilePicture.startsWith('/uploads/')) {
+      return `http://localhost:8080${profilePicture}`;
+    }
+    
+    // If it's just a filename, assume it's in uploads/profiles/
+    return `http://localhost:8080/uploads/profiles/${profilePicture}`;
   }
 }

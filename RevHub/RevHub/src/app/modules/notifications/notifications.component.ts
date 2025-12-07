@@ -74,4 +74,22 @@ export class NotificationsComponent implements OnInit {
   isFollowRequest(notification: Notification): boolean {
     return notification.type === 'FOLLOW_REQUEST';
   }
+
+  // Helper method to get full image URL
+  getImageUrl(profilePicture: string | undefined): string | null {
+    if (!profilePicture) return null;
+    
+    // If it's already a full URL, return as is
+    if (profilePicture.startsWith('http')) {
+      return profilePicture;
+    }
+    
+    // If it's a relative path, prepend backend server URL
+    if (profilePicture.startsWith('/uploads/')) {
+      return `http://localhost:8080${profilePicture}`;
+    }
+    
+    // If it's just a filename, assume it's in uploads/profiles/
+    return `http://localhost:8080/uploads/profiles/${profilePicture}`;
+  }
 }

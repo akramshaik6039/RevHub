@@ -11,6 +11,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -233,6 +239,43 @@ public class ProfileController {
             return ResponseEntity.ok(users);
         } catch (Exception e) {
             return ResponseEntity.ok(new ArrayList<>());
+        }
+    }
+
+    @PostMapping("/upload-photo")
+    public ResponseEntity<?> uploadProfilePhoto(@RequestParam("file") MultipartFile file, Authentication authentication) {
+        try {
+            User user = userRepository.findByUsername(authentication.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Create uploads directory if it doesn't exist
+            String uploadDir = "uploads/profiles/";
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            // Generate unique filename
+            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            Path filePath = uploadPath.resolve(fileName);
+            
+            // Save file
+            Files.copy(file.getInputStream(), filePath);
+            
+            // Update user profile picture URL
+            String profilePictureUrl = "/uploads/profiles/" + fileName;
+            user.setProfilePicture(profilePictureUrl);
+            userRepository.save(user);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("profilePictureUrl", profilePictureUrl);
+            response.put("message", "Profile photo updated successfully");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Failed to upload profile photo: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
         }
     }
 

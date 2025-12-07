@@ -38,8 +38,8 @@ export class ChatService {
     return this.http.get<ChatMessage[]>(`${this.apiUrl}/conversation/${username}`);
   }
 
-  markAsRead(username: string): Observable<string> {
-    return this.http.post<string>(`${this.apiUrl}/mark-read/${username}`, {});
+  markAsRead(username: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/mark-read/${username}`, {}, { responseType: 'text' });
   }
 
   getChatContacts(): Observable<string[]> {
